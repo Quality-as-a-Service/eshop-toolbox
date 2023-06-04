@@ -1,5 +1,5 @@
 FROM python:3.8-slim-buster
-EXPOSE 8000
+EXPOSE 80
 
 ENV DockerHOME=/home/app/webapp  
 RUN mkdir -p $DockerHOME  
@@ -12,5 +12,6 @@ RUN pip install --upgrade pip
 
 COPY . $DockerHOME  
 RUN pip install -r requirements.txt  
+RUN bash setup.sh
 
 CMD ["python", "manage.py", "runserver", "0.0.0.0:80"]
