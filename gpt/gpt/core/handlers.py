@@ -4,6 +4,7 @@ import pandas as pd
 from gpt import settings
 from gpt import models
 
+
 def handle_uploaded_file(request, payload, tag):
     log = []
 
@@ -11,7 +12,7 @@ def handle_uploaded_file(request, payload, tag):
     with tempfile.TemporaryFile('wb+') as f:
         for chunk in payload.chunks():
             f.write(chunk)
-        
+
         f.seek(0)
         df = pd.read_excel(f)
 
@@ -25,7 +26,7 @@ def handle_uploaded_file(request, payload, tag):
 
     prompts = []
     for i, row in df.iterrows():
-        prompt_text=row[settings.EXCEL_PROMPT_COLUMN]
+        prompt_text = row[settings.EXCEL_PROMPT_COLUMN]
         try:
             prompt_text = str(prompt_text).strip()
         except:
@@ -33,10 +34,13 @@ def handle_uploaded_file(request, payload, tag):
             continue
         prompt = models.Prompt(
             dataset=dataset,
-            prompt_text=row[settings.EXCEL_PROMPT_COLUMN], 
+            prompt_text=row[settings.EXCEL_PROMPT_COLUMN],
             is_enabled=True
         )
         prompts.append(prompt)
+    # TODO - undo (limit for test)
+    prompts = prompts[:10 if len(prompts) > 10 else len(prompts)]
+
     models.Prompt.objects.bulk_create(prompts)
 
     log.append(f'Import finished ({len(prompts)} prompts found).')

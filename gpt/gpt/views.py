@@ -75,6 +75,7 @@ def worker(uid):
             )
 
             db_completion.save()
+            sleep(0.1)
 
 
 global_worker_threads = [
