@@ -10,12 +10,25 @@ from threading import Thread, Event
 from queue import Queue, Empty
 from time import sleep
 
+from io import BytesIO
+from django.http import HttpResponse
+
+import pandas as pd
+import openai
+import logging
+
+logger = logging.getLogger('views')
+logging.basicConfig(level=logging.INFO)
+
 global_queue = Queue()
 global_block_event = Event()
 global_block_event.set()
 
 
-def worker():
+def worker(uid):
+    w_logger = logging.getLogger(f'worker({uid})')
+
+    w_logger.info('started')
     while True:
         while global_queue.empty() and global_block_event.is_set():
             sleep(1)
@@ -25,25 +38,53 @@ def worker():
         except Empty:
             continue
         else:
+            w_logger.info(
+                f'processing: {prompt.id} (queue size {global_queue.qsize()}): {prompt.prompt_text}')
             if global_queue.empty():
-                print(f'Finish iteration: {global_queue.qsize()}')
+                w_logger.info(f'finish iteration: {iteration.id}')
                 global_block_event.set()
                 iteration.is_finished = True
                 iteration.save()
 
-            # completition = models.Competition()
-            print(prompt, iteration)
+            is_error = False
+            error = None
+
+            try:
+                ai_completion = openai.Completion.create(
+                    model=iteration.model.model,
+                    prompt=prompt.prompt_text,
+                    temperature=1
+                )
+            except Exception as e:
+                w_logger.warning(f'failed: {prompt.id}: {prompt.prompt_text}')
+                is_error = True
+                error = str(e)
+
+            w_logger.info(
+                f'processed: {prompt.id} (queue size {global_queue.qsize()}): {ai_completion.choices[0].text}')
+
+            db_completion = models.Completition(
+                completition_id=ai_completion.id,
+                completition_text=ai_completion.choices[0].text,
+                completition_token_count=ai_completion.usage.completion_tokens,
+                prompt_token_count=ai_completion.usage.prompt_tokens,
+                prompt=prompt,
+                evaluation_iteration=iteration,
+                is_error=is_error,
+                error_text=error
+            )
+
+            db_completion.save()
 
 
 global_worker_threads = [
-    Thread(target=worker, daemon=True),
-    Thread(target=worker, daemon=True),
-    Thread(target=worker, daemon=True),
-    Thread(target=worker, daemon=True),
-    Thread(target=worker, daemon=True),
+    Thread(target=worker, daemon=True, args=[1]),
+    Thread(target=worker, daemon=True, args=[2]),
+    Thread(target=worker, daemon=True, args=[3]),
+    Thread(target=worker, daemon=True, args=[4]),
+    Thread(target=worker, daemon=True, args=[5]),
 ]
 
-models.EvaluationIteration.finish_unfinished()
 for th in global_worker_threads:
     th.start()
 
@@ -77,7 +118,8 @@ def get_model_api():
 
 @csrf_protect
 def gpt_dashboard_view(request):
-    datasets = models.Dataset.objects.all()
+    logger.info(f'{request.user} view dashboard')
+    datasets = models.Dataset.objects.order_by('-created_at').all()
     dataset_info = []
     for dataset in datasets:
         dataset_info.append({
@@ -85,7 +127,6 @@ def gpt_dashboard_view(request):
             'tag': dataset.tag,
             'prompts_count_all': dataset.prompts_count_all,
             'prompts_count_enabled': dataset.prompts_count_enabled,
-            'prompts_count_evaluated': dataset.prompts_count_evaluated,
             'created_at': dataset.created_at,
             'evaluations': dataset.num_evaluated,
             'status': 'Evaluating...' if dataset.is_evaluating else 'Ready',
@@ -93,7 +134,8 @@ def gpt_dashboard_view(request):
         })
 
     iteration_info = []
-    iterations = models.EvaluationIteration.all_finished()
+    iterations = models.EvaluationIteration.objects.order_by(
+        '-created_at').all()
     for iteration in iterations:
         iteration_info.append({
             'id': iteration.id,
@@ -101,8 +143,11 @@ def gpt_dashboard_view(request):
             'created_by': iteration.created_by.username,
             'dataset_tag': iteration.dataset.tag,
             'model': iteration.model.model,
-            'token': iteration.api.key,
-            # TODO: count cost
+            'token': iteration.api.name,
+            'status': iteration.status,
+            'prompts_enabled': iteration.prompts_count_enabled,
+            'completitions_finished': iteration.completitions_count_finished,
+            'cost': iteration.cost,
         })
 
     model, api, status_message_content, status_message_severity = get_model_api()
@@ -129,6 +174,8 @@ def _gpt_upload_view(request):
     upload_log = None
 
     if request.method == "POST":
+        logger.info(f'{request.user} start upload dataset')
+
         form = UploadFileForm(request.POST, request.FILES)
         if form.is_valid():
             try:
@@ -140,7 +187,10 @@ def _gpt_upload_view(request):
             except AssertionError:
                 upload_message_content = 'Failed to process. Content of file not valid.'
                 upload_message_severity = 'danger'
+        logger.info(f'{request.user} uploaded dataset')
+
     else:
+        logger.info(f'{request.user} view upload page')
         form = UploadFileForm()
     return render(request, "gpt/upload.html", {
         "form": form,
@@ -152,46 +202,111 @@ def _gpt_upload_view(request):
 
 def gpt_action_view(request):
     if request.method == "POST":
+        logger.info(f'{request.user} trigger action')
+
         if models.EvaluationIteration.any_unfinished():
+            logger.info(
+                f'{request.user} unfinished iteration detected - abort')
             return HttpResponseBadRequest('Another iteration in progress')
 
         try:
             ds_id = request.GET["ds_id"]
             action = request.GET["action"]
         except KeyError:
+            logger.info(f'{request.user} bad request')
             return HttpResponseBadRequest('Not enough parameters.')
 
         if action not in [Action.stop, Action.process]:
+            logger.info(f'{request.user} bad action')
             return HttpResponseBadRequest('Action unknown.')
 
+        if action == Action.process:
+            logger.warning(f'{request.user} trigger process action')
+            try:
+                ds_id = int(ds_id)
+            except ValueError:
+                logger.info(f'{request.user} bad id')
+                return HttpResponseBadRequest('ID format unknown.')
+
+            try:
+                ds = models.Dataset.objects.get(id=ds_id)
+            except models.Dataset.DoesNotExist:
+                logger.info(f'{request.user} unknown id')
+                return HttpResponseBadRequest('ID unknown.')
+
+            model, api, *_ = get_model_api()
+
+            try:
+                assert model is not None
+                assert api is not None
+            except AssertionError:
+                logger.info(f'{request.user} model / api not found')
+                return HttpResponseBadRequest('Model/Api not found.')
+
+            openai.api_key = api.key
+
+            prompts = ds.prompts_enabled
+            if not len(prompts):
+                logger.info(f'{request.user} ')
+                return HttpResponseBadRequest('No prompts for exist in dataset.')
+
+            logger.info(f'{request.user} register request')
+            iteration = models.EvaluationIteration(
+                dataset=ds, model=model, api=api, is_started=True)
+            iteration.save_model(request)
+
+            logger.info(f'{request.user} register prompts')
+            for prompt in prompts:
+                global_queue.put([prompt, iteration])
+            global_block_event.clear()
+            logger.info(f'{request.user} trigger processing')
+
+        elif action == Action.stop:
+            logger.warning(f'{request.user} trigger stop action')
+
+            global_block_event.set()
+            while not global_queue.empty():
+                try:
+                    global_queue.get(block=False)
+                except Empty:
+                    pass
+
+        return HttpResponse('ok')
+
+
+def gpt_completition_download(request):
+    if request.method == "GET":
         try:
-            ds_id = int(ds_id)
+            itr_id = request.GET["itr_id"]
+        except KeyError:
+            return HttpResponseBadRequest('Not enough parameters.')
+
+        try:
+            itr_id = int(itr_id)
         except ValueError:
             return HttpResponseBadRequest('ID format unknown.')
 
         try:
-            ds = models.Dataset.objects.get(id=ds_id)
-        except models.Dataset.DoesNotExist:
+            iteration = models.EvaluationIteration.objects.get(id=itr_id)
+        except models.EvaluationIteration.DoesNotExist:
             return HttpResponseBadRequest('ID unknown.')
 
-        model, api, *_ = get_model_api()
+        df = []
+        for c in iteration.completition_set.all():
+            df.append({
+                'prompt_text': c.prompt.prompt_text,
+                'completion_text': c.completition_text,
+                'error': c.error_text
+            })
 
-        try:
-            assert model is not None
-            assert api is not None
-        except AssertionError:
-            return HttpResponseBadRequest('Model/Api not found.')
+        df = pd.DataFrame(df)
 
-        prompts = ds.prompts_nevaluated
-        if not len(prompts):
-            return HttpResponseBadRequest('No prompts for exist in dataset.')
+        f = BytesIO()
+        df.to_excel(f)
+        f.seek(0)
 
-        iteration = models.EvaluationIteration(
-            dataset=ds, model=model, api=api, is_started=True)
-        iteration.save_model(request)
+        response = HttpResponse(
+            f.read(), content_type="application/vnd.ms-excel")
+        response['Content-Disposition'] = f'inline; filename=iteration-{iteration.id}.xlsx'
 
-        for prompt in prompts:
-            global_queue.put([prompt, iteration])
-        global_block_event.clear()
-
-        return HttpResponse('ok')
+        return response

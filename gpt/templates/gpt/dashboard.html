@@ -10,15 +10,15 @@
 <p>
   <ul>
     <li>
-      <strong>Token</strong><span>:</span>
+      <strong>Token</strong><span class="mx-1">:</span>
       {% if api is not None %}
-      <span>{{api.key}}</span>
+      <span>{{api.name}}</span>
       {% else %}
       <span>-</span>
       {% endif %}
     </li>
     <li>
-      <strong>Model</strong><span>:</span>
+      <strong>Model</strong><span class="mx-1">:</span>
       {% if model is not None %}
       <span>{{model.model}}</span>
       {% else %}
@@ -43,7 +43,8 @@
         <tr>
           <th scope="col">Id</th>
           <th scope="col">Tag</th>
-          <th scope="col">Total/enabled/evaluated</th>
+          <th scope="col">Prompts total</th>
+          <th scope="col">Prompts enabled</th>
           <th scope="col">Created at</th>
           <th scope="col">Status</th>
           <th scope="col">Evaluations</th>
@@ -55,7 +56,8 @@
         <tr>
           <td>{{dsi.id}}</td>
           <td>{{dsi.tag}}</td>
-          <td>{{dsi.prompts_count_all}}/{{dsi.prompts_count_enabled}}/{{dsi.prompts_count_evaluated}}</td>
+          <td>{{dsi.prompts_count_all}}</td>
+          <td>{{dsi.prompts_count_enabled}}</td>
           <td>{{dsi.created_at}}</td>
           <td>{{dsi.status}}</td>
           <td>{{dsi.evaluations}}</td>
@@ -70,29 +72,35 @@
     </table>
   </div>
 </p>
-<h2>Iterations.</h2>
+<h2>Iterations</h2>
 <p>
   <div class="table-responsive">
     <table class="table">
       <thead>
         <tr>
           <th scope="col">Id</th>
-          <th scope="col">Created at</th>
-          <th scope="col">Created by</th>
-          <th scope="col">Tag</th>
           <th scope="col">Model</th>
           <th scope="col">Token</th>
+          <th scope="col">Created at</th>
+          <th scope="col">Created by</th>
+          <th scope="col">Status</th>
+          <th scope="col">Cost</th>
+          <th scope="col">Tag</th>
+          <th scope="col">Export URL</th>
         </tr>
       </thead>
       <tbody>
         {% for ii in iteration_info %}
         <tr>
           <td>{{ii.id}}</td>          
+          <td>{{ii.model}}</td>          
+          <td>{{ii.token}}</td>     
           <td>{{ii.created_at}}</td>          
           <td>{{ii.created_by}}</td>          
-          <td>{{ii.dataset_tag}}</td>          
-          <td>{{ii.model}}</td>          
-          <td>{{ii.token}}</td>          
+          <td>{{ii.status}} ({{ii.completitions_finished}}/{{ii.prompts_enabled}})</td>
+          <td>{{ii.cost}}$</td>
+          <td>{{ii.dataset_tag}}</td>    
+          <td><a href={% url 'gpt-export' %}?itr_id={{ii.id}}>Export</a></td>    
         </tr>
         {% endfor %}
       </tbody>
@@ -112,20 +120,22 @@
     },
     methods: {
       async act(action,id){
-        this.lock = true
-        try {
-          await $.ajax({
-            url: `${apiUrl}?action=${action}&ds_id=${id}`,
-            type: 'post',
-            headers: {'X-CSRFToken': csrftoken},
-            mode: 'same-origin',
-          })
-        } catch(e) {
-          alert(e.responseText)
-          this.lock = false
-          return
+        if (confirm(`Are you sure? Action '${action}' will be triggered!`)){
+          this.lock = true
+          try {
+            await $.ajax({
+              url: `${apiUrl}?action=${action}&ds_id=${id}`,
+              type: 'post',
+              headers: {'X-CSRFToken': csrftoken},
+              mode: 'same-origin',
+            })
+          } catch(e) {
+            alert(e.responseText)
+            this.lock = false
+            return
+          }
+          location.reload();
         }
-        location.reload();
       },
     }
   }).mount('#app')

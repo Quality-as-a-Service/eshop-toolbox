@@ -2,3 +2,4 @@ Django
 django-createsuperuser
 pandas
 openpyxl
+openai
