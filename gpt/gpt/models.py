@@ -30,9 +30,33 @@ class Dataset(models.Model):
     def prompts_count_all(self):
         return self.prompt_set.count()
 
-    def save_model(self, request, obj, form, change):
-        obj.created_by = request.user
-        obj.save()
+    @property
+    def prompts_count_evaluated(self):
+        return self.prompt_set.all().filter(is_evaluated=True).count()
+
+    @property
+    def prompts_count_evaluated(self):
+        return self.prompt_set.all().filter(is_evaluated=True).count()
+
+    @property
+    def prompts_nevaluated(self):
+        return self.prompt_set.all().filter(is_evaluated=False, is_enabled=True).all()
+
+    @property
+    def prompts_count_enabled(self):
+        return self.prompt_set.all().filter(is_enabled=True).count()
+
+    @property
+    def is_evaluating(self):
+        return self.evaluationiteration_set.all().filter(is_started=True, is_finished=False).count() > 0
+
+    @property
+    def num_evaluated(self):
+        return self.evaluationiteration_set.all().filter(is_started=True, is_finished=True).count()
+
+    def save_model(self, request):
+        self.created_by = request.user
+        self.save()
 
 # Whenever bulk request to model is made it should be registered as prompt iteration
 
@@ -50,9 +74,24 @@ class EvaluationIteration(models.Model):
     model = models.ForeignKey(GPTModel, on_delete=models.RESTRICT)
     api = models.ForeignKey(Api, on_delete=models.RESTRICT)
 
-    def save_model(self, request, obj, form, change):
-        obj.created_by = request.user
-        obj.save()
+    def save_model(self, request):
+        self.created_by = request.user
+        self.save()
+
+    # In case server fail stop all iterations on start
+    @classmethod
+    def finish_unfinished(cls):
+        for iteration in cls.objects.filter(is_finished=False).all():
+            iteration.is_finished = True
+            iteration.save()
+
+    @classmethod
+    def all_finished(cls):
+        return cls.objects.filter(is_finished=True).all()
+
+    @classmethod
+    def any_unfinished(cls):
+        return cls.objects.filter(is_finished=False).count()
 
     # TODO: count prompts in progress
 
@@ -79,4 +118,5 @@ class Competition(models.Model):
     competition_token_count = models.IntegerField()
 
     prompt = models.ForeignKey(Prompt, on_delete=models.RESTRICT)
-    evaluation_iteration = models.ForeignKey(EvaluationIteration, on_delete=models.RESTRICT)
+    evaluation_iteration = models.ForeignKey(
+        EvaluationIteration, on_delete=models.RESTRICT)

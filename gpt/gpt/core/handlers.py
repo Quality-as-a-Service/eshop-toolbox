@@ -4,7 +4,7 @@ import pandas as pd
 from gpt import settings
 from gpt import models
 
-def handle_uploaded_file(payload, tag):
+def handle_uploaded_file(request, payload, tag):
     log = []
 
     log.append('Import started.')
@@ -20,7 +20,7 @@ def handle_uploaded_file(payload, tag):
     log.append('File format ok.')
 
     dataset = models.Dataset(tag=tag)
-    dataset.save()
+    dataset.save_model(request)
     log.append('Dataset created')
 
     prompts = []

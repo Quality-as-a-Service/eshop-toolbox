@@ -4,6 +4,8 @@
 
 {% block content %} 
 {% if user.is_authenticated %}
+<div id="app">
+{% csrf_token %}
 <h2>Status</h2>
 <p>
   <ul>
@@ -32,7 +34,7 @@
 </p>
 <h2>
   <span>Datasets</span>
-  <a id="btn-upload" class="btn btn-sm btn-primary ml-5" href="{% url 'gpt-upload' %}" role="button">Upload</a></h2>
+  <a id="btn-upload" class="btn btn-sm btn-primary mx-3" href="{% url 'gpt-upload' %}" role="button">Upload</a></h2>
 <p>
   <div>List of existing datasets.</div>
   <div class="table-responsive">
@@ -41,9 +43,11 @@
         <tr>
           <th scope="col">Id</th>
           <th scope="col">Tag</th>
-          <th scope="col">Prompts</th>
+          <th scope="col">Total/enabled/evaluated</th>
           <th scope="col">Created at</th>
           <th scope="col">Status</th>
+          <th scope="col">Evaluations</th>
+          <th scope="col">Action</th>
         </tr>
       </thead>
       <tbody>
@@ -51,15 +55,80 @@
         <tr>
           <td>{{dsi.id}}</td>
           <td>{{dsi.tag}}</td>
-          <td>{{dsi.prompts_count_all}}</td>
+          <td>{{dsi.prompts_count_all}}/{{dsi.prompts_count_enabled}}/{{dsi.prompts_count_evaluated}}</td>
           <td>{{dsi.created_at}}</td>
           <td>{{dsi.status}}</td>
+          <td>{{dsi.evaluations}}</td>
+          <td>
+            <button type="button" class="btn btn-{{dsi.action|yesno:'success,warning'}} btn-sm" :disabled="lock" @click="act('{{ dsi.action }}', {{ dsi.id }})">
+              {{ dsi.action }}
+            </button>
+          </td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
-  
 </p>
+<h2>Iterations.</h2>
+<p>
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">Id</th>
+          <th scope="col">Created at</th>
+          <th scope="col">Created by</th>
+          <th scope="col">Tag</th>
+          <th scope="col">Model</th>
+          <th scope="col">Token</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ii in iteration_info %}
+        <tr>
+          <td>{{ii.id}}</td>          
+          <td>{{ii.created_at}}</td>          
+          <td>{{ii.created_by}}</td>          
+          <td>{{ii.dataset_tag}}</td>          
+          <td>{{ii.model}}</td>          
+          <td>{{ii.token}}</td>          
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</p>
+</div>
+<script>
+  const { createApp } = Vue
+  const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+  const apiUrl = "{% url 'gpt-action' %}"
+  createApp({
+    data() {
+      return {
+        lock: false
+      }
+    },
+    methods: {
+      async act(action,id){
+        this.lock = true
+        try {
+          await $.ajax({
+            url: `${apiUrl}?action=${action}&ds_id=${id}`,
+            type: 'post',
+            headers: {'X-CSRFToken': csrftoken},
+            mode: 'same-origin',
+          })
+        } catch(e) {
+          alert(e.responseText)
+          this.lock = false
+          return
+        }
+        location.reload();
+      },
+    }
+  }).mount('#app')
+</script>
 {% endif %}
 {% endblock %}
