@@ -1,2 +1,4 @@
 Django
 django-createsuperuser
+pandas
+openpyxl

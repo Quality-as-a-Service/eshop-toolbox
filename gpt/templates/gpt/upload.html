@@ -1,0 +1,24 @@
+{% extends 'base.html' %} 
+
+{% block title %}GPT Upload{% endblock %} 
+
+{% block content %} 
+{% if user.is_authenticated %}
+<h2>Upload</h2>
+<form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+  {{ form.as_p }}
+  {% if upload_message_content is not None %}
+    <div class="alert alert-{{upload_message_severity}}" role="alert">
+      <strong>Attention!</strong><span class="mx-2">{{ upload_message_content }}</span>
+    </div>
+  {% endif %}
+  <button class="btn btn-success" type="submit">Upload</button>
+</form>
+{% if upload_log is not None %}
+<div class="text-muted m-2 fs-6 lh-sm">
+  {{ upload_log|join:"</br>" }}
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

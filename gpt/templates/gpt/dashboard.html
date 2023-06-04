@@ -1,0 +1,65 @@
+{% extends 'base.html' %} 
+
+{% block title %}GPT{% endblock %} 
+
+{% block content %} 
+{% if user.is_authenticated %}
+<h2>Status</h2>
+<p>
+  <ul>
+    <li>
+      <strong>Token</strong><span>:</span>
+      {% if api is not None %}
+      <span>{{api.key}}</span>
+      {% else %}
+      <span>-</span>
+      {% endif %}
+    </li>
+    <li>
+      <strong>Model</strong><span>:</span>
+      {% if model is not None %}
+      <span>{{model.model}}</span>
+      {% else %}
+      <span>-</span>
+      {% endif %}
+    </li>
+  </ul>
+  {% if status_message_content is not None %}
+  <div class="alert alert-{{status_message_severity}}" role="alert">
+    <strong>Attention!</strong><span class="mx-2">{{ status_message_content }}</span>
+  </div>
+  {% endif %}
+</p>
+<h2>
+  <span>Datasets</span>
+  <a id="btn-upload" class="btn btn-sm btn-primary ml-5" href="{% url 'gpt-upload' %}" role="button">Upload</a></h2>
+<p>
+  <div>List of existing datasets.</div>
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">Id</th>
+          <th scope="col">Tag</th>
+          <th scope="col">Prompts</th>
+          <th scope="col">Created at</th>
+          <th scope="col">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for dsi in dataset_info %}
+        <tr>
+          <td>{{dsi.id}}</td>
+          <td>{{dsi.tag}}</td>
+          <td>{{dsi.prompts_count_all}}</td>
+          <td>{{dsi.created_at}}</td>
+          <td>{{dsi.status}}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  
+</p>
+{% endif %}
+{% endblock %}
