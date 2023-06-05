@@ -11,6 +11,7 @@ ENV PYTHONUNBUFFERED 1
 RUN pip install --upgrade pip  
 
 COPY . $DockerHOME  
+
 RUN pip install -r requirements.txt  
 RUN bash setup.sh
 
