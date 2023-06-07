@@ -2,6 +2,7 @@ from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
 from django.http import HttpResponseBadRequest, HttpResponse
 
+from gpt import settings
 from gpt import models
 from gpt.forms import UploadFileForm
 from gpt.core.handlers import handle_uploaded_file
@@ -25,6 +26,12 @@ global_block_event = Event()
 global_block_event.set()
 
 
+def add_not_none(pk, kwk, model, kw):
+    if getattr(model, pk) is not None:
+        kw[kwk] = getattr(model, pk)
+    return kw
+
+
 def worker(uid):
     w_logger = logging.getLogger(f'worker({uid})')
 
@@ -46,19 +53,28 @@ def worker(uid):
                 iteration.is_finished = True
                 iteration.save()
 
-            is_error = False
-            error = None
+            kw = {
+                "model": iteration.model.model,
+                "prompt": prompt.prompt_text
+            }
+
+            for pk, kwk in iteration.model.parameters:
+                add_not_none(pk, kwk, iteration.model, kw)
+
+            w_logger.warning(f'kw: {prompt.id}: {kw}')
 
             try:
-                ai_completion = openai.Completion.create(
-                    model=iteration.model.model,
-                    prompt=prompt.prompt_text,
-                    temperature=1
-                )
+                ai_completion = openai.Completion.create(**kw)
             except Exception as e:
                 w_logger.warning(f'failed: {prompt.id}: {prompt.prompt_text}')
-                is_error = True
-                error = str(e)
+                db_completion = models.Completition(
+                    prompt=prompt,
+                    evaluation_iteration=iteration,
+                    is_error=True,
+                    error_text=str(e)
+                )
+                db_completion.save()
+                continue
 
             w_logger.info(
                 f'processed: {prompt.id} (queue size {global_queue.qsize()}): {ai_completion.choices[0].text}')
@@ -70,8 +86,6 @@ def worker(uid):
                 prompt_token_count=ai_completion.usage.prompt_tokens,
                 prompt=prompt,
                 evaluation_iteration=iteration,
-                is_error=is_error,
-                error_text=error
             )
 
             db_completion.save()
@@ -148,6 +162,7 @@ def gpt_dashboard_view(request):
             'status': iteration.status,
             'prompts_enabled': iteration.prompts_count_enabled,
             'completitions_finished': iteration.completitions_count_finished,
+            'completitions_error': iteration.completitions_count_errors,
             'cost': iteration.cost,
         })
 
@@ -194,6 +209,8 @@ def _gpt_upload_view(request):
         logger.info(f'{request.user} view upload page')
         form = UploadFileForm()
     return render(request, "gpt/upload.html", {
+        "excel_prompt_col": settings.EXCEL_PROMPT_COLUMN,
+        "excel_prompt_key": settings.EXCEL_KEY_COLUMN,
         "form": form,
         "upload_message_content": upload_message_content,
         "upload_message_severity": upload_message_severity,
@@ -295,6 +312,7 @@ def gpt_completition_download(request):
         df = []
         for c in iteration.completition_set.all():
             df.append({
+                settings.EXCEL_KEY_COLUMN: c.prompt.prompt_key or '',
                 'prompt_text': c.prompt.prompt_text,
                 'completion_text': c.completition_text,
                 'error': c.error_text

@@ -14,31 +14,53 @@ class GPTModel(models.Model):
     completition_token_cost = models.FloatField()  # dollars
 
     # Parameters
-    p_temperature = models.FloatField(default=1, verbose_name='Temperature', validators=[
+    p_temperature = models.FloatField(default=1, blank=True, verbose_name='Temperature', validators=[
         MinValueValidator(0),
         MaxValueValidator(2)
     ])
     p_max_length = models.BigIntegerField(
-        verbose_name='Response max length (tokens)', default=None, null=True,
+        verbose_name='Response max length (tokens)', default=None, null=True, blank=True,
         validators=[
             MinValueValidator(0),
             MaxValueValidator(10000)
         ])
     p_stop_sequences = models.TextField(
-        verbose_name='Stop sequence', default=None, null=True, help_text='Each sequence on a new line')
+        verbose_name='Stop sequence', default=None, null=True, blank=True, help_text='Each sequence on a new line')
 
-    p_top_p = models.FloatField(verbose_name='Top P', default=None, null=True, validators=[
+    p_top_p = models.FloatField(verbose_name='Top P', default=None, null=True, blank=True, validators=[
         MinValueValidator(0),
         MaxValueValidator(1)
     ])
-    p_frequency_penalty = models.FloatField(verbose_name='Frequency penalty', default=None, null=True, validators=[
+    p_frequency_penalty = models.FloatField(verbose_name='Frequency penalty', default=None, blank=True, null=True, validators=[
         MinValueValidator(0),
         MaxValueValidator(2)
     ])
-    p_best_of = models.IntegerField(verbose_name='Best of', default=None, null=True, validators=[
+    p_presence_penalty = models.FloatField(verbose_name='Presence penalty', default=None, blank=True, null=True, validators=[
+        MinValueValidator(0),
+        MaxValueValidator(2)
+    ])
+    p_best_of = models.IntegerField(verbose_name='Best of', default=None, null=True, blank=True, validators=[
         MinValueValidator(0),
         MaxValueValidator(20)
     ])
+
+    @property
+    def p_stop_sequences_final(self):
+        if self.p_stop_sequences is None:
+            return None
+        seq = [s.strip() for s in self.p_stop_sequences.strip().split('\n')]
+        seq = [s for s in seq if s]
+        return seq if len(seq) else None
+
+    parameters = [
+        ['p_temperature', 'temperature'],
+        ['p_max_length', 'max_tokens'],
+        ['p_stop_sequences_final', 'stop'],
+        ['p_top_p', 'top_p'],
+        ['p_frequency_penalty', 'frequency_penalty'],
+        ['p_presence_penalty', 'presence_penalty'],
+        ['p_best_of', 'best_of'],
+    ]
 
 
 class Api(models.Model):
@@ -128,6 +150,10 @@ class EvaluationIteration(models.Model):
     @property
     def completitions_count_finished(self):
         return self.completition_set.count()
+    
+    @property
+    def completitions_count_errors(self):
+        return self.completition_set.filter(is_error=True).count()
 
     @property
     def cost(self):
@@ -145,7 +171,8 @@ class EvaluationIteration(models.Model):
 
 class Prompt(models.Model):
     # Prompt identifier for user (e.g. product sku)
-    prompt_key = models.CharField(verbose_name='Prompt identifier', default=None, null=True, max_length=200)
+    prompt_key = models.CharField(
+        verbose_name='Prompt identifier', default=None, null=True, max_length=200)
     # Source text from file
     prompt_text = models.TextField()
     # Disabled prompts are not going to be supplied to chat model

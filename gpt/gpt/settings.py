@@ -136,3 +136,4 @@ LOGIN_REDIRECT_URL = "home"
 LOGOUT_REDIRECT_URL = "home"
 
 EXCEL_PROMPT_COLUMN = 'prompt'
+EXCEL_KEY_COLUMN = 'product_sku'
