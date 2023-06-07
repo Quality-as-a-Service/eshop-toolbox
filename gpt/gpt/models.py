@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db.models import Sum
 
 
@@ -8,8 +9,36 @@ class GPTModel(models.Model):
     model = models.CharField(max_length=100, unique=True)
     # Only one model should be enabled
     is_enabled = models.BooleanField(default=False)
+
     prompt_token_cost = models.FloatField()  # dollars
     completition_token_cost = models.FloatField()  # dollars
+
+    # Parameters
+    p_temperature = models.FloatField(default=1, verbose_name='Temperature', validators=[
+        MinValueValidator(0),
+        MaxValueValidator(2)
+    ])
+    p_max_length = models.BigIntegerField(
+        verbose_name='Response max length (tokens)', default=None, null=True,
+        validators=[
+            MinValueValidator(0),
+            MaxValueValidator(10000)
+        ])
+    p_stop_sequences = models.TextField(
+        verbose_name='Stop sequence', default=None, null=True, help_text='Each sequence on a new line')
+
+    p_top_p = models.FloatField(verbose_name='Top P', default=None, null=True, validators=[
+        MinValueValidator(0),
+        MaxValueValidator(1)
+    ])
+    p_frequency_penalty = models.FloatField(verbose_name='Frequency penalty', default=None, null=True, validators=[
+        MinValueValidator(0),
+        MaxValueValidator(2)
+    ])
+    p_best_of = models.IntegerField(verbose_name='Best of', default=None, null=True, validators=[
+        MinValueValidator(0),
+        MaxValueValidator(20)
+    ])
 
 
 class Api(models.Model):
@@ -115,6 +144,8 @@ class EvaluationIteration(models.Model):
 
 
 class Prompt(models.Model):
+    # Prompt identifier for user (e.g. product sku)
+    prompt_key = models.CharField(verbose_name='Prompt identifier', default=None, null=True, max_length=200)
     # Source text from file
     prompt_text = models.TextField()
     # Disabled prompts are not going to be supplied to chat model
