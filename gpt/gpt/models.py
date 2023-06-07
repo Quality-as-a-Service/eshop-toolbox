@@ -200,6 +200,8 @@ class Completition(models.Model):
 
     @property
     def cost(self):
-        return self.evaluation_iteration.model.prompt_token_cost * self.prompt_token_count \
-            + self.evaluation_iteration.model.completition_token_cost * \
-            self.completition_token_count
+        completion_cost = self.evaluation_iteration.model.completition_token_cost * self.completition_token_count
+        prompt_cost = self.evaluation_iteration.model.prompt_token_cost * self.prompt_token_count
+        if self.is_error:
+            return prompt_cost
+        return prompt_cost + completion_cost

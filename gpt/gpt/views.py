@@ -168,9 +168,20 @@ def gpt_dashboard_view(request):
 
     model, api, status_message_content, status_message_severity = get_model_api()
 
+    model_detail = []
+    for pk, _ in model.parameters:
+        pv = getattr(model, pk)
+
+        if pv is None:
+            pv = '-default-'
+
+        model_detail.append(f'{pk}: {pv}')
+    model_detail = '\n'.join(model_detail)
+
     return render(request, "gpt/dashboard.html", {
         "api": api,
         "model": model,
+        "model_detail": model_detail,
         "dataset_info": dataset_info,
         "iteration_info": iteration_info,
         "status_message_content": status_message_content,
