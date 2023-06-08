@@ -2,27 +2,37 @@ version: "3"
 
 services:
   gpt:
-    build: gpt 
-    ports: 
-      - '80:80'
+    build: .
+    container_name: gpt
+    ports:
+      - '8000:8000'
     env_file:
       - .env
-
-  mysql-db:
-    image: mysql:5.7
-    restart: always
     environment:
-      MYSQL_ROOT_HOST: '%'
-      MYSQL_DATABASE: ${MYSQL_DB_DATABASE}
-      MYSQL_USER: ${MYSQL_DB_USER}
-      MYSQL_PASSWORD: ${MYSQL_DB_PASSWORD}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_DB_ROOT_PASSWORD}
+      - DJANGO_SETTINGS_MODULE=gpt.settings
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - db
+
+  adminer:
+    image: adminer
+    container_name: 'adminer'
+    restart: always
     ports:
-      - '${MYSQL_PORT}:3306'
-    expose:
-      - '${MYSQL_PORT}'
+      - 8080:8080
+      
+  db:
+    container_name: 'db'
+    image: mysql:8
+    environment:
+      MYSQL_USER: $SQL_USER
+      MYSQL_DATABASE: $SQL_DATABASE
+      MYSQL_PASSWORD: $SQL_PASSWORD
+      MYSQL_ROOT_PASSWORD: $SQL_PASSWORD
     volumes:
-      - mysql_db:/var/lib/mysql
+      - 'db:/var/lib/mysql'
+    command: ['mysqld', '--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci']
+
 volumes:
-  mysql_db:
-    driver: local
+  db:

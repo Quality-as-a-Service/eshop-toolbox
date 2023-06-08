@@ -13,7 +13,8 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 from pathlib import Path
 import os
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'gpt.settings')
+from dotenv import load_dotenv
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -28,7 +29,7 @@ SECRET_KEY = 'django-insecure-oc7&ai^1q0ps@(^ey3+_bjm0&70tfr5l2nixwxol)v3a)l-iu5
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['176.102.66.48', '127.0.0.1']
+ALLOWED_HOSTS = ['127.0.0.1', '176.102.66.48',]
 
 
 # Application definition
@@ -40,7 +41,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django_createsuperuser',
     'gpt',
 ]
 
@@ -82,11 +82,15 @@ WSGI_APPLICATION = 'gpt.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE':   'mysql.connector.django',
+        'NAME': os.environ['SQL_DATABASE'],
+        'HOST': os.environ['SQL_HOST'],
+        'PORT': 3306,
+        'USER': os.environ['SQL_USER'],
+        'PASSWORD': os.environ['SQL_PASSWORD'],
+        'OPTIONS': {'sql_mode': 'STRICT_ALL_TABLES', 'charset': 'utf8mb4', },
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators

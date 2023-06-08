@@ -1,5 +1,6 @@
 Django
-django-createsuperuser
 pandas
 openpyxl
 openai
+python-dotenv
+mysql-connector-python

@@ -5,4 +5,3 @@ docker-compose*
 README.md
 LICENSE
 .vscode
-db.sqlite3
