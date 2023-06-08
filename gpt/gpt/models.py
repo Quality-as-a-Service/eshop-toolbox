@@ -6,7 +6,12 @@ from django.db.models import Sum
 
 class GPTModel(models.Model):
     # Model type, e.g. gpt-3.5-turbo
-    model = models.CharField(max_length=100, unique=True)
+    model = models.CharField(max_length=100, unique=True, choices=[
+                             ("text-davinci-003", "text-davinci-003"),
+                             ("text-davinci-002", "text-davinci-002"),
+                             ("text-curie-001", "text-curie-001"),
+                             ("text-babbage-001", "text-babbage-001"),
+                             ("text-ada-001", "text-ada-001")])
     # Only one model should be enabled
     is_enabled = models.BooleanField(default=False)
 
@@ -150,7 +155,7 @@ class EvaluationIteration(models.Model):
     @property
     def completitions_count_finished(self):
         return self.completition_set.count()
-    
+
     @property
     def completitions_count_errors(self):
         return self.completition_set.filter(is_error=True).count()
@@ -200,7 +205,8 @@ class Completition(models.Model):
 
     @property
     def cost(self):
-        completion_cost = self.evaluation_iteration.model.completition_token_cost * self.completition_token_count
+        completion_cost = self.evaluation_iteration.model.completition_token_cost * \
+            self.completition_token_count
         prompt_cost = self.evaluation_iteration.model.prompt_token_cost * self.prompt_token_count
         if self.is_error:
             return prompt_cost / 1000

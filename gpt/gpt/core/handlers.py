@@ -1,3 +1,4 @@
+import re
 import tempfile
 import pandas as pd
 
@@ -7,10 +8,13 @@ from gpt import settings
 from gpt import models
 
 
+CLEAN_HTML = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
+
+
 def clean(txt):
     if pd.isnull(txt):
-        raise RuntimeError('Is none')
-    txt = str(txt).strip()
+        raise RuntimeError('Prompt is none')
+    txt = re.sub(CLEAN_HTML, '', str(txt).strip())
     return txt
 
 
@@ -42,7 +46,7 @@ def handle_uploaded_file(request, payload, tag):
     except IntegrityError:
         log.append('Tag MUST be unique. Abort.')
         return log
-    
+
     log.append('Dataset created')
 
     prompts = []
