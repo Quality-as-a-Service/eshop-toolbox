@@ -75,8 +75,6 @@ def handle_uploaded_file(request, payload, tag):
             is_enabled=True
         )
         prompts.append(prompt)
-    # TODO - undo (limit for test)
-    prompts = prompts[:10 if len(prompts) > 10 else len(prompts)]
 
     models.Prompt.objects.bulk_create(prompts)
 
