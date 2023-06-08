@@ -17,6 +17,8 @@
           {% if user.is_authenticated %}
           <a class="nav-item nav-link" href="{% url 'home' %}">Home</a>
           <a class="nav-item nav-link" href="{% url 'admin:index' %}">Administration</a>
+          <a class="nav-item nav-link" href="https://platform.openai.com/playground">Playground</a>
+          <a class="nav-item nav-link" href="https://platform.openai.com/docs/models">Models</a>
           <a class="nav-item nav-link" href="{% url 'logout' %}">Logout</a>
           {% endif %}
         </div>
