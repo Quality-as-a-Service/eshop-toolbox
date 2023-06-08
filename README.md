@@ -6,11 +6,9 @@ Chat GPT for Dalibor Cmolik e-shop (service).
 
 
 ## First run
-Manually execute following steps after `docker-compose up -d --build`.
+Manually execute following steps after `docker-compose up -d --build`. Use `docker exec -it  gpt /bin/bash`.
 ```
-python manage.py migrate
-python manage.py collectstatic
-python manage.py createsuperuser
+bash setup.sh
 ```
 
 ## Stop

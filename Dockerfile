@@ -17,6 +17,4 @@ RUN apt-get install -y default-mysql-client default-libmysqlclient-dev
 
 RUN pip install -r requirements.txt
 
-RUN bash setup.sh
-
 CMD ["python", "manage.py", "runserver", "0.0.0.0:80"]
