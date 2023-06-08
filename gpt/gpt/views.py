@@ -341,3 +341,8 @@ def gpt_completition_download(request):
         response['Content-Disposition'] = f'inline; filename=iteration-{iteration.id}.xlsx'
 
         return response
+
+
+def gpt_manual_view(request):
+    if request.method == "GET":
+        return render(request, "gpt/manual.html")
