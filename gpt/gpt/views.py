@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
 from django.http import HttpResponseBadRequest, HttpResponse
+from django.contrib.auth.decorators import login_required
 
 from gpt import settings
 from gpt import models
@@ -132,6 +133,7 @@ def get_model_api():
 
 
 @csrf_protect
+@login_required
 def gpt_dashboard_view(request):
     logger.info(f'{request.user} view dashboard')
     datasets = models.Dataset.objects.order_by('-created_at').all()
@@ -196,6 +198,7 @@ def gpt_upload_view(request):
 
 
 @csrf_protect
+@login_required
 def _gpt_upload_view(request):
     upload_message_content = None
     upload_message_severity = 'info'
@@ -230,6 +233,7 @@ def _gpt_upload_view(request):
     })
 
 
+@login_required
 def gpt_action_view(request):
     if request.method == "POST":
         logger.info(f'{request.user} trigger action')
@@ -304,6 +308,7 @@ def gpt_action_view(request):
         return HttpResponse('ok')
 
 
+@login_required
 def gpt_completition_download(request):
     if request.method == "GET":
         try:
@@ -343,6 +348,7 @@ def gpt_completition_download(request):
         return response
 
 
+@login_required
 def gpt_manual_view(request):
     if request.method == "GET":
         return render(request, "gpt/manual.html")

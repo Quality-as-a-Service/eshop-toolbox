@@ -4,7 +4,7 @@ from gpt.views import gpt_dashboard_view, gpt_upload_view, gpt_action_view, gpt_
 
 urlpatterns = [
     path('admin/', admin.site.urls, name='admin'),
-    path('auth/', include('django.contrib.auth.urls')),
+    path('accounts/', include('django.contrib.auth.urls')),
     path('', gpt_dashboard_view, name='home'),
     path('modules/gpt/dashboard', gpt_dashboard_view, name='gpt-dashboard'),
     path('modules/gpt/upload', gpt_upload_view, name='gpt-upload'),
