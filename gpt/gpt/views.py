@@ -38,59 +38,68 @@ def worker(uid):
 
     w_logger.info('started')
     while True:
-        while global_queue.empty() and global_block_event.is_set():
-            sleep(1)
-
         try:
-            prompt, iteration = global_queue.get(block=False)
-        except Empty:
-            continue
-        else:
-            w_logger.info(
-                f'processing: {prompt.id} (queue size {global_queue.qsize()}): {prompt.prompt_text}')
-            if global_queue.empty():
-                w_logger.info(f'finish iteration: {iteration.id}')
-                global_block_event.set()
-                iteration.is_finished = True
-                iteration.save()
 
-            kw = {
-                "model": iteration.model.model,
-                "prompt": prompt.prompt_text
-            }
-
-            for pk, kwk in iteration.model.parameters:
-                add_not_none(pk, kwk, iteration.model, kw)
-
-            w_logger.warning(f'kw: {prompt.id}: {kw}')
+            while global_queue.empty() and global_block_event.is_set():
+                sleep(1)
 
             try:
-                ai_completion = openai.Completion.create(**kw)
-            except Exception as e:
-                w_logger.warning(f'failed: {prompt.id}: {prompt.prompt_text}')
-                db_completion = models.Completition(
-                    prompt=prompt,
-                    evaluation_iteration=iteration,
-                    is_error=True,
-                    error_text=str(e)
-                )
-                db_completion.save()
+                prompt, iteration = global_queue.get(block=False)
+            except Empty:
                 continue
+            else:
+                w_logger.info(
+                    f'processing: {prompt.id} (queue size {global_queue.qsize()}): {prompt.prompt_text}')
+                if global_queue.empty():
+                    w_logger.info(f'finish iteration: {iteration.id}')
+                    global_block_event.set()
+                    iteration.is_finished = True
+                    iteration.save()
 
-            w_logger.info(
-                f'processed: {prompt.id} (queue size {global_queue.qsize()}): {ai_completion.choices[0].text}')
+                kw = {
+                    "model": iteration.model.model,
+                    "prompt": prompt.prompt_text
+                }
 
-            db_completion = models.Completition(
-                completition_id=ai_completion.id,
-                completition_text=ai_completion.choices[0].text,
-                completition_token_count=ai_completion.usage.completion_tokens,
-                prompt_token_count=ai_completion.usage.prompt_tokens,
-                prompt=prompt,
-                evaluation_iteration=iteration,
-            )
+                for pk, kwk in iteration.model.parameters:
+                    add_not_none(pk, kwk, iteration.model, kw)
 
-            db_completion.save()
-            sleep(0.1)
+                w_logger.info(f'kw: {prompt.id}: {kw}')
+
+                try:
+                    ai_completion = openai.Completion.create(**kw)
+                    w_logger.info(
+                        f'processed: {prompt.id} (queue size {global_queue.qsize()}): {ai_completion.choices[0].text}')
+
+                    db_completion = models.Completition(
+                        completition_id=ai_completion.id,
+                        completition_text=ai_completion.choices[0].text,
+                        completition_token_count=ai_completion.usage.completion_tokens if hasattr(
+                            ai_completion.usage, 'completion_tokens') else 0,
+                        prompt_token_count=ai_completion.usage.prompt_tokens if hasattr(
+                            ai_completion.usage, 'prompt_tokens') else 0,
+                        prompt=prompt,
+                        evaluation_iteration=iteration,
+                    )
+
+                    db_completion.save()
+                except Exception as e:
+                    w_logger.warning(
+                        f'failed: {prompt.id}: {prompt.prompt_text}')
+                    db_completion = models.Completition(
+                        prompt=prompt,
+                        evaluation_iteration=iteration,
+                        is_error=True,
+                        error_text=str(e)
+                    )
+                    db_completion.save()
+                    continue
+
+                sleep(0.1)
+
+        except Exception as e:
+            w_logger.error('--- UNEXPECTED ---')
+            w_logger.error(e)
 
 
 global_worker_threads = [
