@@ -5,13 +5,42 @@ from django.db.models import Sum
 
 
 class GPTModel(models.Model):
+    COMPATIBILITY_CHAT = 'chat'
+    COMPATIBILITY_COMPLETION = 'completion'
+
+    # Some models are ok with both modes, but for user it does nt matter
+    COMPATIBILITY_MAP = {
+        "text-davinci-003": COMPATIBILITY_COMPLETION,
+        "text-davinci-002": COMPATIBILITY_COMPLETION,
+        "text-curie-001": COMPATIBILITY_COMPLETION,
+        "text-babbage-001": COMPATIBILITY_COMPLETION,
+        "text-ada-001": COMPATIBILITY_COMPLETION,
+        "gpt-4": COMPATIBILITY_CHAT,
+        "gpt-4-0314": COMPATIBILITY_CHAT,
+        "gpt-4-32k": COMPATIBILITY_CHAT,
+        "gpt-4-32k-0314": COMPATIBILITY_CHAT,
+        "gpt-3.5-turbo": COMPATIBILITY_CHAT,
+        "gpt-3.5-turbo-0301": COMPATIBILITY_CHAT,
+    }
+
+    @property
+    def compatibility(self):
+        return self.COMPATIBILITY_MAP[self.model]
+
     # Model type, e.g. gpt-3.5-turbo
     model = models.CharField(max_length=100, unique=True, choices=[
                              ("text-davinci-003", "text-davinci-003"),
                              ("text-davinci-002", "text-davinci-002"),
                              ("text-curie-001", "text-curie-001"),
                              ("text-babbage-001", "text-babbage-001"),
-                             ("text-ada-001", "text-ada-001")])
+                             ("text-ada-001", "text-ada-001"),
+                             # https://platform.openai.com/docs/models/gpt-4
+                             #  ("gpt-4", "gpt-4"),
+                             #  ("gpt-4-0314", "gpt-4-0314"),
+                             #  ("gpt-4-32k", "gpt-4-32k"),
+                             #  ("gpt-4-32k-0314", "gpt-4-32k-0314"),
+                             ("gpt-3.5-turbo", "gpt-3.5-turbo"),
+                             ("gpt-3.5-turbo-0301", "gpt-3.5-turbo-0301")])
     # Only one model should be enabled
     is_enabled = models.BooleanField(default=False)
 
@@ -57,15 +86,26 @@ class GPTModel(models.Model):
         seq = [s for s in seq if s]
         return seq if len(seq) else None
 
-    parameters = [
-        ['p_temperature', 'temperature'],
-        ['p_max_length', 'max_tokens'],
-        ['p_stop_sequences_final', 'stop'],
-        ['p_top_p', 'top_p'],
-        ['p_frequency_penalty', 'frequency_penalty'],
-        ['p_presence_penalty', 'presence_penalty'],
-        ['p_best_of', 'best_of'],
-    ]
+    @property
+    def parameters(self):
+        if self.compatibility == self.COMPATIBILITY_COMPLETION:
+            return [
+                ['p_temperature', 'temperature'],
+                ['p_max_length', 'max_tokens'],
+                ['p_stop_sequences_final', 'stop'],
+                ['p_top_p', 'top_p'],
+                ['p_frequency_penalty', 'frequency_penalty'],
+                ['p_presence_penalty', 'presence_penalty'],
+                ['p_best_of', 'best_of'],
+            ]
+        elif self.compatibility == self.COMPATIBILITY_CHAT:
+            return [
+                ['p_temperature', 'temperature'],
+                ['p_max_length', 'max_tokens'],
+                ['p_top_p', 'top_p'],
+                ['p_frequency_penalty', 'frequency_penalty'],
+                ['p_presence_penalty', 'presence_penalty'],
+            ]
 
 
 class Api(models.Model):

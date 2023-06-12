@@ -1,4 +1,3 @@
-import re
 import tempfile
 import pandas as pd
 
@@ -6,16 +5,12 @@ from django.db.utils import IntegrityError
 
 from gpt import settings
 from gpt import models
+from gpt.utils import clean_html
 
+import logging
 
-CLEAN_HTML = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
-
-
-def clean(txt):
-    if pd.isnull(txt):
-        raise RuntimeError('Prompt is none')
-    txt = re.sub(CLEAN_HTML, '', str(txt).strip())
-    return txt
+logger = logging.getLogger('handlers')
+logging.basicConfig(level=logging.INFO)
 
 
 def handle_uploaded_file(request, payload, tag):
@@ -51,20 +46,21 @@ def handle_uploaded_file(request, payload, tag):
 
     prompts = []
     for i, row in df.iterrows():
-        prompt_text = row[settings.EXCEL_PROMPT_COLUMN]
-        prompt_key = row[settings.EXCEL_KEY_COLUMN] if do_keys else None
+        prompt_text = str(row[settings.EXCEL_PROMPT_COLUMN])
+        prompt_key = str(row[settings.EXCEL_KEY_COLUMN]) if do_keys else None
 
         try:
-            prompt_text = clean(prompt_text)
+            prompt_text = clean_html(prompt_text)
         except Exception as e:
-            print(e)
+            logger.warn(e)
             log.append(f'Skip: row: {i}, text: "{prompt_text}" ')
             continue
 
         if prompt_key is not None:
             try:
-                prompt_key = clean(prompt_key)
-            except:
+                prompt_key = clean_html(prompt_key)
+            except Exception as e:
+                logger.warn(e)
                 log.append(f'Skip: row: {i}, key: "{prompt_key}" ')
                 continue
 

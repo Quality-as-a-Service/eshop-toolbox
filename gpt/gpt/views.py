@@ -6,6 +6,7 @@ from django.contrib.auth.decorators import login_required
 from gpt import settings
 from gpt import models
 from gpt.forms import UploadFileForm
+from gpt.utils import clean_response
 from gpt.core.handlers import handle_uploaded_file
 
 from threading import Thread, Event
@@ -31,6 +32,20 @@ def add_not_none(pk, kwk, model, kw):
     if getattr(model, pk) is not None:
         kw[kwk] = getattr(model, pk)
     return kw
+
+
+def _worker_handle_completion(prompt, **kwargs):
+    ai_completion = openai.Completion.create(prompt=prompt, **kwargs)
+
+    return ai_completion, ai_completion.choices[0].text
+
+
+def _worker_handle_chat(prompt, **kwargs):
+    ai_completion = openai.ChatCompletion.create(
+        messages=[{"role": "user", "content": prompt}],
+        **kwargs
+    )
+    return ai_completion, ai_completion.choices[0].message.content
 
 
 def worker(uid):
@@ -67,13 +82,17 @@ def worker(uid):
                 w_logger.info(f'kw: {prompt.id}: {kw}')
 
                 try:
-                    ai_completion = openai.Completion.create(**kw)
-                    w_logger.info(
-                        f'processed: {prompt.id} (queue size {global_queue.qsize()}): {ai_completion.choices[0].text}')
+                    if iteration.model.compatibility == models.GPTModel.COMPATIBILITY_COMPLETION:
+                        ai_completion, response = _worker_handle_completion(
+                            **kw)
+                    elif iteration.model.compatibility == models.GPTModel.COMPATIBILITY_CHAT:
+                        ai_completion, response = _worker_handle_chat(**kw)
+                    else:
+                        raise RuntimeError('Undefined mode')
 
                     db_completion = models.Completition(
                         completition_id=ai_completion.id,
-                        completition_text=ai_completion.choices[0].text,
+                        completition_text=clean_response(response),
                         completition_token_count=ai_completion.usage.completion_tokens if hasattr(
                             ai_completion.usage, 'completion_tokens') else 0,
                         prompt_token_count=ai_completion.usage.prompt_tokens if hasattr(
@@ -81,11 +100,11 @@ def worker(uid):
                         prompt=prompt,
                         evaluation_iteration=iteration,
                     )
-
-                    db_completion.save()
                 except Exception as e:
+                    # Sometimes API does not return counts (TODO: investigate)
                     w_logger.warning(
                         f'failed: {prompt.id}: {prompt.prompt_text}')
+                    w_logger.exception(e)
                     db_completion = models.Completition(
                         prompt=prompt,
                         evaluation_iteration=iteration,
@@ -95,6 +114,10 @@ def worker(uid):
                     db_completion.save()
                     continue
 
+                w_logger.info(
+                    f'processed: {prompt.id} (queue {global_queue.qsize()}): {ai_completion}')
+
+                db_completion.save()
                 sleep(0.1)
 
         except Exception as e:
@@ -322,6 +345,7 @@ def gpt_completition_download(request):
     if request.method == "GET":
         try:
             itr_id = request.GET["itr_id"]
+            fmt = request.GET["format"]
         except KeyError:
             return HttpResponseBadRequest('Not enough parameters.')
 
@@ -347,12 +371,20 @@ def gpt_completition_download(request):
         df = pd.DataFrame(df)
 
         f = BytesIO()
-        df.to_excel(f)
+        filename = f'iteration-{iteration.id}'
+        if fmt == 'excel':
+            df.to_excel(f)
+            filename += '.xlsx'
+        elif fmt == 'csv':
+            df.to_csv(f, sep=';')
+            filename += '.csv'
+        else:
+            return HttpResponseBadRequest('Wrong format.')
         f.seek(0)
 
         response = HttpResponse(
             f.read(), content_type="application/vnd.ms-excel")
-        response['Content-Disposition'] = f'inline; filename=iteration-{iteration.id}.xlsx'
+        response['Content-Disposition'] = f'inline; filename={filename}'
 
         return response
 

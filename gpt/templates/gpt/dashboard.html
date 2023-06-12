@@ -101,7 +101,7 @@
           <td>{{ii.status}} ({{ii.completitions_finished}}/{{ii.prompts_enabled}}, {{ii.completitions_error}} errors)</td>
           <td>{{ii.cost}}$</td>
           <td>{{ii.dataset_tag}}</td>    
-          <td><a href={% url 'gpt-export' %}?itr_id={{ii.id}}>Export</a></td>    
+          <td><a href="{% url 'gpt-export' %}?itr_id={{ii.id}}&format=excel">Excel</a>, <a href="{% url 'gpt-export' %}?itr_id={{ii.id}}&format=csv">CSV</a></td>    
         </tr>
         {% endfor %}
       </tbody>
