@@ -170,8 +170,8 @@ class EvaluationIteration(models.Model):
         if total_completion_token_count is None or total_prompt_token_count is None:
             return 0
 
-        return round(self.model.prompt_token_cost * total_prompt_token_count
-                     + self.model.completition_token_cost * total_completion_token_count, 10)
+        return round((self.model.prompt_token_cost / 1000) * total_prompt_token_count
+                     + (self.model.completition_token_cost / 1000) * total_completion_token_count, 10)
 
 
 class Prompt(models.Model):
