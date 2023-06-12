@@ -5,7 +5,7 @@
 {% block content %} 
 {% if user.is_authenticated %}
 <h2>Upload</h2>
-<p>Excel must have <strong>{{excel_prompt_col}}</strong> column with prompt text and may have <strong>{{excel_prompt_key}}</strong> column with prompt key (e.g. sku number) </p>
+<p>Excel (or csv with ';' delimiter) must have <strong>{{excel_prompt_col}}</strong> column with prompt text and may have <strong>{{excel_prompt_key}}</strong> column with prompt key (e.g. sku number) </p>
 <form method="post" enctype="multipart/form-data">
   {% csrf_token %}
   {{ form.as_p }}

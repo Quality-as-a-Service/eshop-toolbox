@@ -18,12 +18,21 @@ def handle_uploaded_file(request, payload, tag):
     do_keys = False
 
     log.append('Import started.')
+
     with tempfile.TemporaryFile('wb+') as f:
         for chunk in payload.chunks():
             f.write(chunk)
 
         f.seek(0)
-        df = pd.read_excel(f)
+        if 'csv' in payload.name:
+            df = pd.read_csv(f, delimiter=';')
+            log.append('File extension csv detected.')
+        elif 'xlsx' in payload.name:
+            df = pd.read_excel(f)
+            log.append('File extension excel detected.')
+        else:
+            log.append('File extension unknown.')
+            return log
 
         assert settings.EXCEL_PROMPT_COLUMN in df.columns
         try:
