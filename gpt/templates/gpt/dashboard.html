@@ -88,6 +88,7 @@
           <th scope="col">Cost</th>
           <th scope="col">Tag</th>
           <th scope="col">Export URL</th>
+          <th scope="col">Retry (empty)</th>
         </tr>
       </thead>
       <tbody>
@@ -98,10 +99,15 @@
           <td>{{ii.token}}</td>     
           <td>{{ii.created_at}}</td>          
           <td>{{ii.created_by}}</td>          
-          <td>{{ii.status}} ({{ii.completitions_finished}}/{{ii.prompts_enabled}}, {{ii.completitions_error}} errors)</td>
+          <td>{{ii.status}} {{ii.completitions_finished}}/{{ii.prompts_enabled}}, {{ii.completitions_error}} errors, {{ii.prompts_with_empty_completitions_count}} empty</td>
           <td>{{ii.cost}}$</td>
           <td>{{ii.dataset_tag}}</td>    
           <td><a href="{% url 'gpt-export' %}?itr_id={{ii.id}}&format=excel">Excel</a>, <a href="{% url 'gpt-export' %}?itr_id={{ii.id}}&format=csv">CSV</a></td>    
+          <td>
+            <button type="button" class="btn btn-success btn-sm" :disabled="lock" @click="act('process', {{ ii.dataset_id }}, {{ ii.id }})">
+              retry
+            </button>
+          </td>
         </tr>
         {% endfor %}
       </tbody>
@@ -112,7 +118,7 @@
 <script>
   const { createApp } = Vue
   const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-  const apiUrl = "{% url 'gpt-action' %}"
+  const apiUrl = "{% url 'gpt-dataset-action' %}"
   createApp({
     data() {
       return {
@@ -120,12 +126,18 @@
       }
     },
     methods: {
-      async act(action,id){
+      async act(action, dataset_id, iteration_id){
         if (confirm(`Are you sure? Action '${action}' will be triggered!`)){
           this.lock = true
+          
+          let url = `${apiUrl}?action=${action}&ds_id=${dataset_id}`
+          if (iteration_id !== undefined) {
+            url = `${url}&iter_id=${iteration_id}`
+          }
+
           try {
             await $.ajax({
-              url: `${apiUrl}?action=${action}&ds_id=${id}`,
+              url: url,
               type: 'post',
               headers: {'X-CSRFToken': csrftoken},
               mode: 'same-origin',

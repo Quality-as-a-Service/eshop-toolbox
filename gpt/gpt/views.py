@@ -191,12 +191,14 @@ def gpt_dashboard_view(request):
             'created_at': iteration.created_at,
             'created_by': iteration.created_by.username,
             'dataset_tag': iteration.dataset.tag,
+            'dataset_id': iteration.dataset.id,
             'model': iteration.model.model,
             'token': iteration.api.name,
             'status': iteration.status,
-            'prompts_enabled': iteration.prompts_count_enabled,
+            'prompts_enabled': iteration.prompts_count_enabled if iteration.target_prompts_amount is None else iteration.target_prompts_amount,
             'completitions_finished': iteration.completitions_count_finished,
             'completitions_error': iteration.completitions_count_errors,
+            'prompts_with_empty_completitions_count': iteration.prompts_with_empty_completitions_count,
             'cost': iteration.cost,
         })
 
@@ -266,9 +268,9 @@ def _gpt_upload_view(request):
 
 
 @login_required
-def gpt_action_view(request):
+def gpt_dataset_action_view(request):
     if request.method == "POST":
-        logger.info(f'{request.user} trigger action')
+        logger.info(f'{request.user} trigger action on dataset')
 
         if models.EvaluationIteration.any_unfinished():
             logger.info(
@@ -277,6 +279,8 @@ def gpt_action_view(request):
 
         try:
             ds_id = request.GET["ds_id"]
+            iter_id = request.GET.get("iter_id", None)
+
             action = request.GET["action"]
         except KeyError:
             logger.info(f'{request.user} bad request')
@@ -297,8 +301,17 @@ def gpt_action_view(request):
             try:
                 ds = models.Dataset.objects.get(id=ds_id)
             except models.Dataset.DoesNotExist:
-                logger.info(f'{request.user} unknown id')
-                return HttpResponseBadRequest('ID unknown.')
+                logger.info(f'{request.user} unknown dataset id')
+                return HttpResponseBadRequest('Dataset ID unknown.')
+
+            iteration = None
+            if iter_id is not None:
+                try:
+                    iteration = models.EvaluationIteration .objects.get(
+                        id=iter_id)
+                except models.EvaluationIteration.DoesNotExist:
+                    logger.info(f'{request.user} unknown iteration id')
+                    return HttpResponseBadRequest('Iteration ID unknown.')
 
             model, api, *_ = get_model_api()
 
@@ -311,14 +324,20 @@ def gpt_action_view(request):
 
             openai.api_key = api.key
 
-            prompts = ds.prompts_enabled
+            if iteration is not None:
+                prompts = [
+                    c.prompt for c in iteration.prompts_with_empty_completitions]
+                logger.info(f'{request.user} request reprocess empty')
+            else:
+                prompts = ds.prompts_enabled
+                logger.info(f'{request.user} request process enabled')
             if not len(prompts):
                 logger.info(f'{request.user} ')
                 return HttpResponseBadRequest('No prompts for exist in dataset.')
 
             logger.info(f'{request.user} register request')
             iteration = models.EvaluationIteration(
-                dataset=ds, model=model, api=api, is_started=True)
+                dataset=ds, model=model, api=api, is_started=True, target_prompts_amount=len(prompts))
             iteration.save_model(request)
 
             logger.info(f'{request.user} register prompts')

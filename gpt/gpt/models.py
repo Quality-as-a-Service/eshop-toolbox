@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db.models import Sum
+from django.db.models import Sum, Q
 
 
 class GPTModel(models.Model):
@@ -160,6 +160,10 @@ class EvaluationIteration(models.Model):
     is_started = models.BooleanField(default=False)
     is_finished = models.BooleanField(default=False)
 
+    # Some iterations will not run oser entre dataset, so record how many
+    # prompts has been found just before processing. If none - entire data set 
+    target_prompts_amount = models.BigIntegerField(default=None, null=True)
+
     dataset = models.ForeignKey(Dataset, on_delete=models.RESTRICT)
     model = models.ForeignKey(GPTModel, on_delete=models.RESTRICT)
     api = models.ForeignKey(Api, on_delete=models.RESTRICT)
@@ -197,6 +201,18 @@ class EvaluationIteration(models.Model):
         return self.completition_set.count()
 
     @property
+    def completitions_empty_query(self):
+        return Q(Q(completition_text__isnull=True) | Q(completition_text=''), prompt__is_enabled=True)
+
+    @property
+    def prompts_with_empty_completitions(self):
+        return self.completition_set.filter(self.completitions_empty_query).select_related('prompt').all()
+
+    @property
+    def prompts_with_empty_completitions_count(self):
+        return self.completition_set.filter(self.completitions_empty_query).select_related('prompt').count()
+
+    @property
     def completitions_count_errors(self):
         return self.completition_set.filter(is_error=True).count()
 
@@ -231,13 +247,13 @@ class Completition(models.Model):
     # Result from gpt
     # null means error in this completition
     completition_id = models.CharField(null=True, max_length=100, unique=True)
-    completition_text = models.TextField(null=True)
+    completition_text = models.TextField(null=True, blank=True)
 
     completition_token_count = models.IntegerField(null=True)
     prompt_token_count = models.IntegerField(blank=True, null=True)
 
     is_error = models.BooleanField(default=False)
-    error_text = models.TextField(null=True)
+    error_text = models.TextField(null=True, blank=True)
 
     prompt = models.ForeignKey(Prompt, on_delete=models.RESTRICT)
     evaluation_iteration = models.ForeignKey(
