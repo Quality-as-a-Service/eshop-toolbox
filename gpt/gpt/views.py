@@ -195,7 +195,7 @@ def gpt_dashboard_view(request):
             'model': iteration.model.model,
             'token': iteration.api.name,
             'status': iteration.status,
-            'prompts_enabled': iteration.prompts_count_enabled if iteration.target_prompts_amount is None else iteration.target_prompts_amount,
+            'prompts_enabled': iteration.target_prompts_amount,
             'completitions_finished': iteration.completitions_count_finished,
             'completitions_error': iteration.completitions_count_errors,
             'prompts_with_empty_completitions_count': iteration.prompts_with_empty_completitions_count,
