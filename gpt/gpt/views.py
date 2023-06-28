@@ -2,6 +2,7 @@ from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
 from django.http import HttpResponseBadRequest, HttpResponse
 from django.contrib.auth.decorators import login_required
+from django.db import Error
 
 from gpt import settings
 from gpt import models
@@ -120,9 +121,17 @@ def worker(uid):
                 db_completion.save()
                 sleep(0.1)
 
+        except Error as e:
+            w_logger.error('--- UNEXPECTED DJANGO ERROR ---')
+            w_logger.exception(e)
+
+            global_block_event.set()
+            # Do not try to contact DB it may be dead
+            # Just stop processing
+
         except Exception as e:
             w_logger.error('--- UNEXPECTED ---')
-            w_logger.error(e)
+            w_logger.exception(e)
 
 
 global_worker_threads = [
