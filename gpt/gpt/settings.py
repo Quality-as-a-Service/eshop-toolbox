@@ -10,11 +10,28 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
-from pathlib import Path
+import logging
 import os
 
+from logging.handlers import RotatingFileHandler
 from dotenv import load_dotenv
+from pathlib import Path
+
 load_dotenv()
+
+
+logging.basicConfig(
+    level=logging.INFO,
+    handlers=[
+        logging.StreamHandler(),
+        RotatingFileHandler(
+            filename='app.log',
+            mode='a',
+            maxBytes=10 * (10**9),
+            backupCount=10
+        )
+    ])
+
 
 DEBUG = os.environ.get('DEBUG') == '1'
 

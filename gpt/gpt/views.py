@@ -22,7 +22,6 @@ import openai
 import logging
 
 logger = logging.getLogger('views')
-logging.basicConfig(level=logging.INFO)
 
 global_queue = Queue()
 global_block_event = Event()
