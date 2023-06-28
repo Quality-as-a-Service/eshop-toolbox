@@ -80,7 +80,8 @@ WSGI_APPLICATION = 'gpt.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-
+CONN_MAX_AGE = 3600
+CONN_HEALTH_CHECKS = True
 DATABASES = {
     'default': {
         'ENGINE':   'mysql.connector.django',
