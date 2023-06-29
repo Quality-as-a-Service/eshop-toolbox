@@ -120,7 +120,7 @@ class Product:
             price = self.soup.css.select('p.price del .amount')[0].text
         except IndexError:
             return None
-        
+
         price = re.sub(ESHOP_PRICE_RE, '', price).replace(',', '.')
         try:
             price = float(price)
@@ -142,7 +142,7 @@ class Product:
             else:
                 print(self.soup.css.select('p.price .amount'), 1)
                 raise RuntimeError('Product price not found') from exc
-            
+
         price = re.sub(ESHOP_PRICE_RE, '', price).replace(',', '.')
         try:
             price = float(price)
@@ -310,12 +310,12 @@ def product_processing(url: str) -> Product:
     return Product(url, soup)
 
 
-LIMIT = 20
+LIMIT = None
 if __name__ == '__main__':
     count = 0
     assembler = Assembler(INDEX, COLUMNS, COLUMNS_MAP)
     for url in product_url_generator(ESHOP_URL_TEMPLATE):
-        if count == LIMIT:
+        if LIMIT is not None and count == LIMIT:
             break
         count += 1
         try:
@@ -327,4 +327,4 @@ if __name__ == '__main__':
         assembler.collect(product)
     for product in assembler.products:
         assembler.add(product)
-    assembler.table.to_csv('test.csv')
+    assembler.table.to_csv('out.csv')
