@@ -286,7 +286,7 @@ def product_url_generator(template: str):
             assert response.status_code == 200
         except AssertionError as exc:
             logger.info(f'Fetch failed, stop iteration')
-            raise StopIteration() from exc
+            return
         else:
             logger.info(f'Fetch success')
             page += 1
