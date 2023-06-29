@@ -158,7 +158,7 @@ class Product:
         return [el.text for el in self.soup.css.select('.posted_in a')]
 
     def _parse_volume(self):
-        return [el.text for el in self.soup.css.select('.description > span.label')]
+        return [el.text for el in self.soup.css.select('.description span.label')]
 
     def _parse_profile(self):
         uid = None
