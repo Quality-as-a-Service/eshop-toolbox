@@ -167,7 +167,7 @@ class Product:
             if 'VÝKONOVÝ PROFIL' in tab.text:
                 uid = tab.get('aria-controls')
         if uid is None:
-            logger.warning(f'[{self.product_sku}] VÝKONOVÝ PROFIL not found')
+            logger.warning(f'[{self.url}] VÝKONOVÝ PROFIL not found')
             return ''
         content = self.soup.css.select(f'div#{uid}')
         if len(content):
@@ -181,7 +181,7 @@ class Product:
             if 'CHARAKTERISTIKA' in tab.text:
                 uid = tab.get('aria-controls')
         if uid is None:
-            logger.warning(f'[{self.product_sku}] CHARAKTERISTIKA not found')
+            logger.warning(f'[{self.url}] CHARAKTERISTIKA not found')
             return ''
         content = self.soup.css.select(f'div#{uid}')
         if len(content):
@@ -195,7 +195,7 @@ class Product:
             if 'Další informace' in tab.text:
                 uid = tab.get('aria-controls')
         if uid is None:
-            logger.warning(f'[{self.product_sku}] Další informace not found')
+            logger.warning(f'[{self.url}] Další informace not found')
             return ''
         content = self.soup.css.select(f'div#{uid}')
         if len(content):
@@ -250,7 +250,7 @@ class Assembler:
                 rp = self._products_url_map[rp_url]
             except KeyError:
                 logger.warning(
-                    f'Failed to resolve related product with url: {rp_url} for {product.product_sku}')
+                    f'Failed to resolve related product with url: {rp_url} for {product.url}')
             else:
                 related_sku_list.append(rp.product_sku)
         return related_sku_list
@@ -270,7 +270,7 @@ class Assembler:
                 value = str(value).strip()
                 product_dict[col] = value
             else:
-                logger.info(f'[{product.product_sku}] {prop} not found')
+                logger.info(f'[{product.url}] {prop} not found')
         row = pd.DataFrame(product_dict, index=[self._index])
         self._table = pd.concat([self._table, row], ignore_index=True)
 
