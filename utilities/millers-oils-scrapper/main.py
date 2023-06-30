@@ -4,6 +4,7 @@ import copy
 import re
 import random
 import requests
+import json
 import pandas as pd
 from typing import List, Optional
 
@@ -20,6 +21,7 @@ ESHOP_IMAGE_URL_RE = re.compile(r'-\d+x\d+\.')
 ESHOP_PRICE_RE = re.compile(r'[^\d\,]')
 
 INDEX = 'product_sku'
+VAR_PARENT = 'product_parent_sku'
 COLUMNS_MAP = [
     ['url', 'url'],
     ['product_sku', 'product_sku'],
@@ -38,6 +40,9 @@ COLUMNS_MAP = [
     ['product_name', 'product_name'],
 ]
 COLUMNS = [col for _, col in COLUMNS_MAP]
+COLUMNS.append(VAR_PARENT)
+VAR_PROPS = ['product_sku', 'product_sales',
+             'product_override_price', 'volume_list']
 
 
 class Product:
@@ -49,10 +54,10 @@ class Product:
     product_desc: Optional[str] = None
 
     product_override_price: Optional[float] = None
-    product_sales: float
+    product_sales: Optional[float] = None
 
     type_list: List[str]
-    volume_list: List[str]
+    volume_list: Optional[List[str]]
     profile: str
     characteristic: str
     additional_info: Optional[str]
@@ -63,22 +68,36 @@ class Product:
 
     related_product_url_list: List[int]
 
+    class Variant:
+        product_sku: int
+        product_override_price: Optional[float] = None
+        product_sales: float
+        volume_list: List[str]
+
+    variants_data: Optional[List[Variant]] = None
+
     def __init__(self, url, soup: BeautifulSoup):
         self.url = url
         self.soup = soup
+
+        self.variants_data = self._parse_variants_data()
 
         self.product_sku = self._parse_sku()
         self.product_name = self._parse_name()
         self.product_s_desc = self._parse_short_desc()
         self.product_desc = self._parse_desc()
 
-        # > Keep order!
-        self.product_override_price = self._prase_product_override_price()
-        self.product_sales = self._prase_product_sales()
-        # < Keep order!
+        if self.variants_data is None:
+            self.volume_list = self._parse_volume_list()
+            self.product_override_price = self._prase_product_override_price(
+                self.soup)
+            self.product_sales = self._prase_product_sales(self.soup)
+        else:
+            self.volume_list = None
+            self.product_override_price = None
+            self.product_sales = None
 
         self.type_list = self._parse_type()
-        self.volume_list = self._parse_volume()
         self.profile = self._parse_profile()
         self.characteristic = self._parse_characteristic()
         self.additional_info = self._parse_additional_info()
@@ -90,6 +109,28 @@ class Product:
 
     def assign_related_product_sku_list(self, rp_sku: list):
         self.related_product_sku_list = rp_sku
+
+    def _parse_variants_data(self):
+        variants = []
+        try:
+            raw = json.loads(self.soup.css.select('.variations_form.cart')[
+                             0]['data-product_variations'])
+        except (ValueError, IndexError, KeyError) as exc:
+            return None
+
+        for raw_var in raw:
+            if raw_var['variation_is_visible']:
+                var = self.Variant()
+                var.product_sku = int(raw_var['sku'])
+                price_html = BeautifulSoup(
+                    raw_var['price_html'], 'html.parser')
+                var.product_override_price = self._prase_product_override_price(
+                    price_html, False)
+                var.product_sales = self._prase_product_sales(
+                    price_html, False)
+                var.volume_list = [raw_var['attributes']['attribute_pa_objem']]
+                variants.append(var)
+        return variants
 
     def _parse_sku(self):
         try:
@@ -115,9 +156,10 @@ class Product:
             el = self._remove_attrs(desc[0])
             return str(el)
 
-    def _prase_product_override_price(self):
+    def _prase_product_override_price(self, soup, whole_page=True):
+        scope = ".product-essential" if whole_page else ''
         try:
-            price = self.soup.css.select('p.price del .amount')[0].text
+            price = soup.css.select(f'{scope} .price del .amount')[0].text
         except IndexError:
             return None
 
@@ -129,18 +171,14 @@ class Product:
 
         return price
 
-    def _prase_product_sales(self):
+    def _prase_product_sales(self, soup, whole_page=True):
+        scope = ".product-essential" if whole_page else ''
         try:
-            price = self.soup.css.select('p.price ins .amount')[0].text
+            price = soup.css.select(f'{scope} .price ins .amount')[0].text
         except IndexError as exc:
-            if self.product_override_price is None:
-                try:
-                    price = self.soup.css.select('p.price .amount')[0].text
-                except IndexError as exc:
-                    print(self.soup.css.select('p.price .amount'), 2)
-                    raise RuntimeError('Product price not found') from exc
-            else:
-                print(self.soup.css.select('p.price .amount'), 1)
+            try:
+                price = soup.css.select('.price .amount')[0].text
+            except IndexError as exc:
                 raise RuntimeError('Product price not found') from exc
 
         price = re.sub(ESHOP_PRICE_RE, '', price).replace(',', '.')
@@ -157,8 +195,8 @@ class Product:
     def _parse_category_name(self):
         return [el.text for el in self.soup.css.select('.posted_in a')]
 
-    def _parse_volume(self):
-        return [el.text for el in self.soup.css.select('.description span.label')]
+    def _parse_volume_list(self):
+        return [el.text.replace('objem', '') for el in self.soup.css.select('.description span.label')]
 
     def _parse_profile(self):
         uid = None
@@ -231,6 +269,7 @@ class Assembler:
 
         self._index = index
         self._mapping = mapping
+        self._mapping_dict = dict(mapping)
 
     @property
     def table(self):
@@ -255,6 +294,13 @@ class Assembler:
                 related_sku_list.append(rp.product_sku)
         return related_sku_list
 
+    def _finalize_value(self, value):
+        if isinstance(value, list):
+            value = [str(v).strip() for v in value]
+            value = MULTIPLE_JOIN_EL.join(value)
+        value = str(value).strip()
+        return value
+
     def add(self, product: Product):
         product_dict = {}
 
@@ -264,15 +310,32 @@ class Assembler:
         for prop, col in self._mapping:
             value = getattr(product, prop)
             if value is not None:
-                if isinstance(value, list):
-                    value = [str(v).strip() for v in value]
-                    value = MULTIPLE_JOIN_EL.join(value)
-                value = str(value).strip()
+                value = self._finalize_value(value)
                 product_dict[col] = value
-            else:
+            elif not (product.variants_data is not None and prop in VAR_PROPS):
                 logger.info(f'[{product.url}] {prop} not found')
-        row = pd.DataFrame(product_dict, index=[self._index])
-        self._table = pd.concat([self._table, row], ignore_index=True)
+
+        if product.variants_data is not None:
+            logger.info(f'[{product.url}] variants detected')
+            parent = product.product_sku
+            for var in product.variants_data:
+                var_dict = copy.copy(product_dict)
+                for prop in VAR_PROPS:
+                    col = self._mapping_dict[prop]
+                    value = getattr(var, prop)
+                    if value is not None:
+                        value = self._finalize_value(value)
+                        var_dict[col] = value
+                    else:
+                        logger.info(
+                            f'[{product.url} variants] {prop} not found')
+                var_dict[VAR_PARENT] = parent
+                row = pd.DataFrame(var_dict, index=[self._index])
+                self._table = pd.concat([self._table, row], ignore_index=True)
+
+        else:
+            row = pd.DataFrame(product_dict, index=[self._index])
+            self._table = pd.concat([self._table, row], ignore_index=True)
 
 
 def product_url_generator(template: str):
@@ -306,7 +369,7 @@ def product_processing(url: str) -> Product:
     except AssertionError as exc:
         raise RuntimeError(f'Product fetch failed: {url}') from exc
 
-    soup = BeautifulSoup(response.content, features='html.parser')
+    soup = BeautifulSoup(response.content, 'html.parser')
     return Product(url, soup)
 
 
@@ -315,6 +378,7 @@ if __name__ == '__main__':
     count = 0
     assembler = Assembler(INDEX, COLUMNS, COLUMNS_MAP)
     for url in product_url_generator(ESHOP_URL_TEMPLATE):
+        # url = 'https://www.millers-oils.cz/shop/prevodove-oleje/prevodovy-plne-synteticky-olej-millers-oils-crx-ls-75w90-nt/'
         if LIMIT is not None and count == LIMIT:
             break
         count += 1
