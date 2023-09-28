@@ -349,6 +349,14 @@ def gpt_dataset_action_view(request):
             iteration.save_model(request)
 
             logger.info(f'{request.user} register prompts')
+
+            
+            while not global_queue.empty():
+                try:
+                    _ = global_queue.get(block=False)
+                except Empty:
+                    break
+                
             for prompt in prompts:
                 global_queue.put([prompt, iteration])
             global_block_event.clear()
