@@ -112,13 +112,14 @@ def worker(uid):
                         error_text=str(e)
                     )
                     db_completion.save()
+                    sleep(30)
                     continue
 
                 w_logger.info(
                     f'processed: {prompt.id} (queue {global_queue.qsize()}): {ai_completion}')
 
                 db_completion.save()
-                sleep(0.1)
+                sleep(10)
 
         except Error as e:
             w_logger.error('--- UNEXPECTED DJANGO ERROR ---')
