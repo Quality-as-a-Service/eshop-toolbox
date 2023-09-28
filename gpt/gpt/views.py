@@ -55,7 +55,7 @@ def worker(uid):
     while True:
         try:
 
-            while global_queue.empty() and global_block_event.is_set():
+            while global_queue.empty() or global_block_event.is_set():
                 sleep(1)
 
             try:
