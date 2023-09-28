@@ -157,7 +157,7 @@ def get_model_api():
     api = None
 
     try:
-        api = models.Api.objects.get(is_enabled=True)
+        api = models.Api.objects.filter(is_enabled=True).all()[0]
     except models.Api.DoesNotExist:
         message_content = 'API Token not defined.'
         message_severity = 'danger'
