@@ -97,11 +97,11 @@ WSGI_APPLICATION = 'gpt.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-CONN_MAX_AGE = None
+CONN_MAX_AGE = 0
 CONN_HEALTH_CHECKS = True
 DATABASES = {
     'default': {
-        'ENGINE':   'mysql.connector.django',
+        'ENGINE':   'django.db.backends.mysql',
         'NAME': os.environ['SQL_DATABASE'],
         'HOST': os.environ['SQL_HOST'],
         'PORT': 3306,

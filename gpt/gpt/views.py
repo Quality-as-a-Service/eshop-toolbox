@@ -126,6 +126,11 @@ def worker(uid):
             w_logger.exception(e)
 
             global_block_event.set()
+            try:
+                iteration.is_finished = True
+                iteration.save()
+            except:
+                pass
             # Do not try to contact DB it may be dead
             # Just stop processing
 
@@ -281,11 +286,6 @@ def gpt_dataset_action_view(request):
     if request.method == "POST":
         logger.info(f'{request.user} trigger action on dataset')
 
-        if models.EvaluationIteration.any_unfinished():
-            logger.info(
-                f'{request.user} unfinished iteration detected - abort')
-            return HttpResponseBadRequest('Another iteration in progress')
-
         try:
             ds_id = request.GET["ds_id"]
             iter_id = request.GET.get("iter_id", None)
@@ -300,6 +300,11 @@ def gpt_dataset_action_view(request):
             return HttpResponseBadRequest('Action unknown.')
 
         if action == Action.process:
+            if models.EvaluationIteration.any_unfinished():
+                logger.info(
+                    f'{request.user} unfinished iteration detected - abort')
+                return HttpResponseBadRequest('Another iteration in progress')
+
             logger.warning(f'{request.user} trigger process action')
             try:
                 ds_id = int(ds_id)
@@ -351,13 +356,12 @@ def gpt_dataset_action_view(request):
 
             logger.info(f'{request.user} register prompts')
 
-            
             while not global_queue.empty():
                 try:
                     _ = global_queue.get(block=False)
                 except Empty:
                     break
-                
+
             for prompt in prompts:
                 global_queue.put([prompt, iteration])
             global_block_event.clear()
