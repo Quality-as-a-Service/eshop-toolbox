@@ -433,3 +433,39 @@ def gpt_completition_download(request):
 def gpt_manual_view(request):
     if request.method == "GET":
         return render(request, "gpt/manual.html")
+
+
+@login_required
+def test_db(request):
+    if request.method == "GET":
+        try:
+            p_id = request.GET["p_id"]
+        except KeyError:
+            return HttpResponseBadRequest('Not enough parameters.')
+
+        try:
+            p_id = int(p_id)
+        except ValueError:
+            return HttpResponseBadRequest('ID format unknown.')
+
+        try:
+            p = models.Prompt.objects.get(pk=p_id)
+            org = p.is_enabled
+            p.is_enabled = not org
+            p.save()
+            p.is_enabled = org
+            p.save()
+        except Exception as e:
+            return HttpResponse(str(e))
+        return HttpResponse('ok')
+
+
+@login_required
+def reconnect_db(request):
+    if request.method == "GET":
+        try:
+            from django.db import connection
+            connection.connect()
+        except Exception as e:
+            return HttpResponse(str(e))
+        return HttpResponse('ok')
