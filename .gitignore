@@ -9,6 +9,9 @@ gpt/static
 
 *.log*
 
+development.sqlite
+results/*
+
 # Distribution / packaging
 .Python
 build/
