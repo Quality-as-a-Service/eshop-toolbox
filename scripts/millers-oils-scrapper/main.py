@@ -10,12 +10,13 @@ from typing import List, Optional
 
 from bs4 import BeautifulSoup
 
-logger = logging.getLogger('main')
+logger = logging.getLogger('utils.millers-oil')
 logging.basicConfig(level=logging.INFO)
 
 DO_SLEEP = False
 
 MULTIPLE_JOIN_EL = '|'
+ESHOP_NAME = 'millers_oils_cz'
 ESHOP_URL_TEMPLATE = 'https://www.millers-oils.cz/shop/page/{page}?product_count=30'
 ESHOP_IMAGE_URL_RE = re.compile(r'-\d+x\d+\.')
 ESHOP_PRICE_RE = re.compile(r'[^\d\,]')
@@ -391,4 +392,4 @@ if __name__ == '__main__':
         assembler.collect(product)
     for product in assembler.products:
         assembler.add(product)
-    assembler.table.to_csv('out.csv')
+    assembler.table.to_csv(f"results/{ESHOP_NAME}.csv")
