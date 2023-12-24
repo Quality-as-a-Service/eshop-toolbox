@@ -10,6 +10,7 @@ gpt/static
 *.log*
 
 development.sqlite
+*.sqlite
 results/*
 
 # Distribution / packaging
