@@ -1,3 +1,4 @@
+import re
 import sys
 import time
 import random
@@ -11,7 +12,7 @@ if __name__ == '__main__':
     # Fix import issues
     import sys
     sys.path.append('.')
-    from scripts.common import remove_attrs, Assembler as BaseAssembler, Product as BaseProduct
+    from scripts.common import Assembler as BaseAssembler, Product as BaseProduct
     from scripts.exceptions import NotFound, get_log_wrapper
 
 
@@ -28,6 +29,9 @@ BASE_URL = ['https://ziener.com/en', ['winter', 'summer']]
 
 class Product(BaseProduct):
 
+    css_colors_url = "https://ziener.com/templates/ziener/css/nagel.werbeagentur.css"
+    css_colors_content = None
+
     @property
     @get_log_wrapper(logger)
     def product_name(self):
@@ -38,11 +42,40 @@ class Product(BaseProduct):
 
     @property
     @get_log_wrapper(logger)
+    def sku(self):
+        try:
+            for r in self.soup.css.select('#pills-info tr'):
+                if r.css.select('td:nth-child(1)')[0].text == 'Item No.':
+                    return r.css.select('td:nth-child(2)')[0].text
+        except Exception as e:
+            raise NotFound() from e
+        raise NotFound()
+
+    @property
+    @get_log_wrapper(logger)
     def product_description(self):
         try:
             return str(self.soup.css.select('#features-home')[0])
         except Exception as e:
             raise NotFound() from e
+
+    @property
+    @get_log_wrapper(logger)
+    def color_codes(self):
+        try:
+            return [e.text for e in self.soup.css.select('#pills-farben #detail_name')]
+        except Exception as e:
+            raise NotFound() from e
+
+    @property
+    @get_log_wrapper(logger)
+    def colors(self):
+        codes = self.color_codes
+        colors = []
+        if len(codes):
+            for c in codes:
+                colors.append(self._get_color_name(c))
+        return colors
 
     @property
     @get_log_wrapper(logger)
@@ -60,12 +93,30 @@ class Product(BaseProduct):
         except Exception as e:
             raise NotFound() from e
 
+    def _get_color_name(self, code):
+        exp = re.compile(f'(?<=icon-colors_{code}' + r'::after\s){.*}')
+        m = exp.search(self.css_colors_content)
+        if m is None:
+            raise NotFound()
+        else:
+            color = m.group(0)
+            color = color.replace('{', '')
+            color = color.replace('}', '')
+            color = color.replace('content:', '')
+            color = color.replace('"', '')
+            color = color.replace(';', '')
+            color = color.strip()
+            return color
+
 
 class Assembler(BaseAssembler):
     INDEX = "url"
     COLUMNS = [
         "url",
+        "sku",
         "product_name",
+        "colors",
+        "color_codes",
         "product_description",
         "product_material",
         "images"
@@ -92,6 +143,13 @@ class Assembler(BaseAssembler):
 
 class Workflow:
     session = requests_cache.CachedSession('development')
+
+    @staticmethod
+    def init_css_content():
+        response = Workflow.session.get(Product.css_colors_url)
+        assert response.status_code == 200
+
+        Product.css_colors_content = response.content.decode('utf-8')
 
     @staticmethod
     def url_generator(base_url: str, sections: List[str]) -> str:
@@ -152,6 +210,8 @@ if __name__ == "__main__":
 
     assembler = Assembler()
     base_url, sections = BASE_URL
+
+    Workflow.init_css_content()
     for product_url in Workflow.url_generator(base_url, sections):
         logger.info(f'Collected: {product_url}')
         count += 1
@@ -168,4 +228,5 @@ if __name__ == "__main__":
     logger.info(f'Collected: {count} products')
 
     table = assembler.build()
-    table.to_csv(f"results/{ESHOP_NAME}/sample-10.csv")
+    table.to_csv(
+        f"results/{ESHOP_NAME}/{ESHOP_NAME}-sample-10.csv", index=False)

@@ -1,25 +1,29 @@
+import re
 import sys
 import time
 import random
 import logging
 import requests_cache
 import pandas as pd
+
+from lxml.html.clean import Cleaner
 from bs4 import BeautifulSoup
 
 if __name__ == '__main__':
     # Fix import issues
     import sys
     sys.path.append('.')
-    from scripts.common import remove_attrs, remove_query_params, Assembler as BaseAssembler, Product as BaseProduct
+    from scripts.common import Assembler as BaseAssembler, Product as BaseProduct
     from scripts.exceptions import NotFound, get_log_wrapper
 
+ESHOP_NAME = 'schoeffel'
 
-logger = logging.getLogger("scripts.schoeffel")
+
+logger = logging.getLogger(f"scripts.{ESHOP_NAME}")
 logging.basicConfig(level=logging.INFO)
 
 DO_SLEEP = False
 
-ESHOP_NAME = 'schoeffel'
 ESHOP_URLS = [['https://www.schoeffel.com/de/de/damen', 32],
               ['https://www.schoeffel.com/de/de/herren', 30],
               ['https://www.schoeffel.com/de/de/kinder', 2]]
@@ -27,6 +31,39 @@ ESHOP_URLS = [['https://www.schoeffel.com/de/de/damen', 32],
 
 class Product(BaseProduct):
     parent_url: str
+
+    sku_re = re.compile(r'(?<=Artikelnummer\s)\d+')
+
+    @property
+    @get_log_wrapper(logger)
+    def sku(self):
+        desc = self.product_description_text
+        if not desc:
+            raise NotFound()
+
+        m = self.sku_re.search(desc)
+        if m is None:
+            raise NotFound()
+
+        return m.group(0)
+
+    @property
+    @get_log_wrapper(logger)
+    def color(self):
+        try:
+            return self.soup.css.select(
+                '#article-wrapper section.headline div.filter.color-wrapper a.active')[0].get('title')
+        except Exception as e:
+            raise NotFound() from e
+
+    @property
+    @get_log_wrapper(logger)
+    def color_code(self):
+        try:
+            return self.soup.css.select(
+                '#article-wrapper section.headline div.filter.color-wrapper a.active')[0].get('data-color-number')
+        except Exception as e:
+            raise NotFound() from e
 
     @property
     @get_log_wrapper(logger)
@@ -41,6 +78,14 @@ class Product(BaseProduct):
     def product_description(self):
         try:
             return str(self.soup.css.select('#article-description')[0])
+        except Exception as e:
+            raise NotFound() from e
+
+    @property
+    @get_log_wrapper(logger)
+    def product_description_text(self):
+        try:
+            return self.soup.css.select('#article-description')[0].text
         except Exception as e:
             raise NotFound() from e
 
@@ -66,6 +111,9 @@ class Assembler(BaseAssembler):
     COLUMNS = [
         "url",
         # "parent_url",
+        "sku",
+        "color",
+        "color_code",
         "product_name",
         "product_description",
         "product_material",
@@ -177,4 +225,5 @@ if __name__ == "__main__":
     logger.info(f'Collected: {count} products')
 
     table = assembler.build()
-    table.to_csv(f"results/{ESHOP_NAME}/sample-10.csv")
+    table.to_csv(
+        f"results/{ESHOP_NAME}/{ESHOP_NAME}-sample-10.csv", index=False)
