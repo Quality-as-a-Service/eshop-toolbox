@@ -6,7 +6,6 @@ import logging
 import requests_cache
 import pandas as pd
 
-from lxml.html.clean import Cleaner
 from bs4 import BeautifulSoup
 
 if __name__ == '__main__':
@@ -120,6 +119,9 @@ class Assembler(BaseAssembler):
         "images"
     ]
 
+    def exist(self, url):
+        return url in self._products_url_map
+
     def build(self):
         table = pd.DataFrame(columns=self.COLUMNS, index=[self.INDEX]).dropna()
         for product in self._products_url_map.values():
@@ -140,11 +142,15 @@ class Assembler(BaseAssembler):
 
 
 class Workflow:
-    session = requests_cache.CachedSession('development')
+    session = requests_cache.CachedSession('production-27-12-2023')
+    # session = requests_cache.CachedSession('development')
+
+    collected = set()
 
     @staticmethod
     def url_generator(base_url: str, pages: int) -> str:
         for page in range(pages):
+            logger.info(f'Page: {page} / {pages}')
             page_url = f'{base_url}?page={page + 1}'
             for product_url in Workflow._url_generator_product(page_url):
                 for variant_url in Workflow._url_generator_variant(product_url):
@@ -200,15 +206,21 @@ class Workflow:
         return Product(url, soup)
 
 
-LIMIT = 10
+LIMIT = None
 if __name__ == "__main__":
     count = 0
 
     assembler = Assembler()
     for base_url, pages in ESHOP_URLS:
+        logger.info(f'Collecting: {base_url}')
         for parent_url, variant_url in Workflow.url_generator(base_url, pages):
-            logger.info(f'Collected: {variant_url}')
+            
+            if assembler.exist(variant_url):
+                continue
+
             count += 1
+            if count and count % 100 == 0:
+                logger.info(f'Count: {count}')
             try:
                 product = Workflow.url_collector(variant_url)
             except Exception as e:
@@ -226,4 +238,5 @@ if __name__ == "__main__":
 
     table = assembler.build()
     table.to_csv(
-        f"results/{ESHOP_NAME}/{ESHOP_NAME}-sample-10.csv", index=False)
+        f"results/{ESHOP_NAME}/{ESHOP_NAME}-27-12-23-full.csv", index=False)
+    # f"results/{ESHOP_NAME}/{ESHOP_NAME}-sample-10.csv", index=False)

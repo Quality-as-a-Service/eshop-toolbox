@@ -62,10 +62,17 @@ class Product(BaseProduct):
     @property
     @get_log_wrapper(logger)
     def color_codes(self):
-        try:
-            return [e.text for e in self.soup.css.select('#pills-farben #detail_name')]
-        except Exception as e:
-            raise NotFound() from e
+        codes = []
+        for e in self.soup.css.select('#pills-farben #detail_name'):
+            cs = e.css.select('[class^="icon-colors"]')
+            var_codes = []
+            for c in cs:
+                c = [cl for cl in c.get('class') if 'icon-colors' in cl]
+                c = c[0]
+                c = c.replace('icon-colors_', '')
+                var_codes.append(c)
+            codes.append(','.join(var_codes))
+        return codes
 
     @property
     @get_log_wrapper(logger)
@@ -73,8 +80,11 @@ class Product(BaseProduct):
         codes = self.color_codes
         colors = []
         if len(codes):
-            for c in codes:
-                colors.append(self._get_color_name(c))
+            for cs in codes:
+                var_colors = []
+                for c in cs.split(','):
+                    var_colors.append(self._get_color_name(c))
+                colors.append(','.join(var_colors))
         return colors
 
     @property
@@ -97,7 +107,7 @@ class Product(BaseProduct):
         exp = re.compile(f'(?<=icon-colors_{code}' + r'::after\s){.*}')
         m = exp.search(self.css_colors_content)
         if m is None:
-            raise NotFound()
+            return 'unknown'
         else:
             color = m.group(0)
             color = color.replace('{', '')
@@ -142,7 +152,8 @@ class Assembler(BaseAssembler):
 
 
 class Workflow:
-    session = requests_cache.CachedSession('development')
+    session = requests_cache.CachedSession('production-27-12-2023')
+    # session = requests_cache.CachedSession('development')
 
     @staticmethod
     def init_css_content():
@@ -204,7 +215,7 @@ class Workflow:
         return Product(url, soup)
 
 
-LIMIT = 10
+LIMIT = None
 if __name__ == "__main__":
     count = 0
 
@@ -213,8 +224,12 @@ if __name__ == "__main__":
 
     Workflow.init_css_content()
     for product_url in Workflow.url_generator(base_url, sections):
-        logger.info(f'Collected: {product_url}')
+        logger.info(f'URL: {product_url}')
+
         count += 1
+        if count and count % 100 == 0:
+            logger.info(f'Count: {count}')
+
         try:
             product = Workflow.url_collector(product_url)
         except Exception as e:
@@ -229,4 +244,4 @@ if __name__ == "__main__":
 
     table = assembler.build()
     table.to_csv(
-        f"results/{ESHOP_NAME}/{ESHOP_NAME}-sample-10.csv", index=False)
+        f"results/{ESHOP_NAME}/{ESHOP_NAME}-27-12-23-full.csv", index=False)
