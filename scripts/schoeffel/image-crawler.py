@@ -23,15 +23,26 @@ logging.basicConfig(level=logging.INFO)
 
 DO_SLEEP = False
 
-ESHOP_URLS = [['https://www.schoeffel.com/de/de/damen', 32],
-              ['https://www.schoeffel.com/de/de/herren', 30],
+ESHOP_URLS = [['https://www.schoeffel.com/de/de/damen', 43],
+              ['https://www.schoeffel.com/de/de/herren', 38],
               ['https://www.schoeffel.com/de/de/kinder', 2]]
+
+
+def normalize_text(text):
+    lines = text.split('\n')
+    n_lines = []
+    for line in lines:
+        line = re.sub(r'\s+', ' ', line).strip()
+        if line:
+            n_lines.append(line)
+    text = '\n'.join(n_lines)
+    return text
 
 
 class Product(BaseProduct):
     parent_url: str
 
-    sku_re = re.compile(r'(?<=Artikelnummer\s)\d+')
+    sku_re = re.compile(r'(?<=Modellnummer\s)(\d+-\d+)')
 
     @property
     @get_log_wrapper(logger)
@@ -76,7 +87,7 @@ class Product(BaseProduct):
     @get_log_wrapper(logger)
     def product_description(self):
         try:
-            return str(self.soup.css.select('#article-description')[0])
+            return normalize_text(self.soup.css.select('#article-description')[0].get_text())
         except Exception as e:
             raise NotFound() from e
 
@@ -92,7 +103,7 @@ class Product(BaseProduct):
     @get_log_wrapper(logger)
     def product_material(self):
         try:
-            return str(self.soup.css.select('#article-material')[0])
+            return normalize_text(self.soup.css.select('#article-material')[0].get_text())
         except Exception as e:
             raise NotFound() from e
 
@@ -142,7 +153,7 @@ class Assembler(BaseAssembler):
 
 
 class Workflow:
-    session = requests_cache.CachedSession('production-27-12-2023')
+    session = requests_cache.CachedSession('production-18-02-2024')
     # session = requests_cache.CachedSession('development')
 
     collected = set()
@@ -214,7 +225,7 @@ if __name__ == "__main__":
     for base_url, pages in ESHOP_URLS:
         logger.info(f'Collecting: {base_url}')
         for parent_url, variant_url in Workflow.url_generator(base_url, pages):
-            
+
             if assembler.exist(variant_url):
                 continue
 
@@ -238,5 +249,5 @@ if __name__ == "__main__":
 
     table = assembler.build()
     table.to_csv(
-        f"results/{ESHOP_NAME}/{ESHOP_NAME}-27-12-23-full.csv", index=False)
+        f"results/{ESHOP_NAME}/{ESHOP_NAME}-18-02-24-full.csv", index=False)
     # f"results/{ESHOP_NAME}/{ESHOP_NAME}-sample-10.csv", index=False)

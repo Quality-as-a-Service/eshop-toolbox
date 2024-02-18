@@ -1,6 +1,5 @@
 from copy import copy
 
-import pandas as pd
 from urllib.parse import urlparse, urlunparse
 from bs4 import BeautifulSoup
 
