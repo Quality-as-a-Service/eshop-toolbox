@@ -9,7 +9,7 @@ gpt/static
 
 *.log*
 
-development.sqlite
+*.sqlite
 *.sqlite
 results/*
 

@@ -8,7 +8,7 @@ def get_log_wrapper(logger):
             try:
                 return fn(*args, **kwargs)
             except NotFound as e:
-                logger.warning(str(e))
+                logger.warning(f'{str(fn.__name__)} not found')
                 raise
             except Exception as e:
                 logger.warning(str(e))

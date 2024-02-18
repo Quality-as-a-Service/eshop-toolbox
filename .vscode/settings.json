@@ -6,6 +6,7 @@
     "python.formatting.provider": "none",
     "cSpell.words": [
         "completition",
-        "completitions"
+        "completitions",
+        "cooldown"
     ]
 }
