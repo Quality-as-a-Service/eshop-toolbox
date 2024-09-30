@@ -143,8 +143,8 @@ global_worker_threads = [
     Thread(target=worker, daemon=True, args=[1]),
     Thread(target=worker, daemon=True, args=[2]),
     Thread(target=worker, daemon=True, args=[3]),
-    Thread(target=worker, daemon=True, args=[4]),
-    Thread(target=worker, daemon=True, args=[5]),
+    # Thread(target=worker, daemon=True, args=[4]),
+    # Thread(target=worker, daemon=True, args=[5]),
 ]
 
 for th in global_worker_threads:
@@ -321,7 +321,7 @@ def gpt_dataset_action_view(request):
             iteration = None
             if iter_id is not None:
                 try:
-                    iteration = models.EvaluationIteration .objects.get(
+                    iteration = models.EvaluationIteration.objects.get(
                         id=iter_id)
                 except models.EvaluationIteration.DoesNotExist:
                     logger.info(f'{request.user} unknown iteration id')
@@ -373,8 +373,13 @@ def gpt_dataset_action_view(request):
             global_block_event.set()
             while not global_queue.empty():
                 try:
-                    global_queue.get(block=False)
+                    prompt, iteration = global_queue.get(block=False)
+                    if not iteration.is_finished:
+                        iteration.is_finished = True
+                        iteration.save()
                 except Empty:
+                    pass
+                except Exception as e:
                     pass
 
         return HttpResponse('ok')
