@@ -295,6 +295,8 @@ class Assembler:
         return related_sku_list
 
     def _finalize_value(self, value):
+        if isinstance(value, float):
+            value = f'{value:.2f}'.replace('.',',')
         if isinstance(value, list):
             value = [str(v).strip() for v in value]
             value = MULTIPLE_JOIN_EL.join(value)
