@@ -55,7 +55,7 @@ def worker(uid):
     while True:
         try:
 
-            while global_queue.empty() and global_block_event.is_set():
+            while global_queue.empty() or global_block_event.is_set():
                 sleep(1)
 
             try:
@@ -112,19 +112,25 @@ def worker(uid):
                         error_text=str(e)
                     )
                     db_completion.save()
+                    sleep(30)
                     continue
 
                 w_logger.info(
                     f'processed: {prompt.id} (queue {global_queue.qsize()}): {ai_completion}')
 
                 db_completion.save()
-                sleep(0.1)
+                sleep(10)
 
         except Error as e:
             w_logger.error('--- UNEXPECTED DJANGO ERROR ---')
             w_logger.exception(e)
 
             global_block_event.set()
+            try:
+                iteration.is_finished = True
+                iteration.save()
+            except:
+                pass
             # Do not try to contact DB it may be dead
             # Just stop processing
 
@@ -157,7 +163,7 @@ def get_model_api():
     api = None
 
     try:
-        api = models.Api.objects.get(is_enabled=True)
+        api = models.Api.objects.filter(is_enabled=True).all()[0]
     except models.Api.DoesNotExist:
         message_content = 'API Token not defined.'
         message_severity = 'danger'
@@ -280,11 +286,6 @@ def gpt_dataset_action_view(request):
     if request.method == "POST":
         logger.info(f'{request.user} trigger action on dataset')
 
-        if models.EvaluationIteration.any_unfinished():
-            logger.info(
-                f'{request.user} unfinished iteration detected - abort')
-            return HttpResponseBadRequest('Another iteration in progress')
-
         try:
             ds_id = request.GET["ds_id"]
             iter_id = request.GET.get("iter_id", None)
@@ -299,6 +300,11 @@ def gpt_dataset_action_view(request):
             return HttpResponseBadRequest('Action unknown.')
 
         if action == Action.process:
+            if models.EvaluationIteration.any_unfinished():
+                logger.info(
+                    f'{request.user} unfinished iteration detected - abort')
+                return HttpResponseBadRequest('Another iteration in progress')
+
             logger.warning(f'{request.user} trigger process action')
             try:
                 ds_id = int(ds_id)
@@ -349,6 +355,13 @@ def gpt_dataset_action_view(request):
             iteration.save_model(request)
 
             logger.info(f'{request.user} register prompts')
+
+            while not global_queue.empty():
+                try:
+                    _ = global_queue.get(block=False)
+                except Empty:
+                    break
+
             for prompt in prompts:
                 global_queue.put([prompt, iteration])
             global_block_event.clear()
@@ -420,3 +433,39 @@ def gpt_completition_download(request):
 def gpt_manual_view(request):
     if request.method == "GET":
         return render(request, "gpt/manual.html")
+
+
+@login_required
+def test_db(request):
+    if request.method == "GET":
+        try:
+            p_id = request.GET["p_id"]
+        except KeyError:
+            return HttpResponseBadRequest('Not enough parameters.')
+
+        try:
+            p_id = int(p_id)
+        except ValueError:
+            return HttpResponseBadRequest('ID format unknown.')
+
+        try:
+            p = models.Prompt.objects.get(pk=p_id)
+            org = p.is_enabled
+            p.is_enabled = not org
+            p.save()
+            p.is_enabled = org
+            p.save()
+        except Exception as e:
+            return HttpResponse(str(e))
+        return HttpResponse('ok')
+
+
+@login_required
+def reconnect_db(request):
+    if request.method == "GET":
+        try:
+            from django.db import connection
+            connection.connect()
+        except Exception as e:
+            return HttpResponse(str(e))
+        return HttpResponse('ok')

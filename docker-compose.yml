@@ -15,6 +15,8 @@ services:
       - PYTHONUNBUFFERED=1
     depends_on:
       - db
+    volumes:
+      - 'dbsocket:/run/mysqld'
 
   db:
     container_name: 'db'
@@ -27,6 +29,7 @@ services:
       MYSQL_ROOT_PASSWORD: $SQL_PASSWORD
     volumes:
       - 'db:/var/lib/mysql'
+      - 'dbsocket:/var/run/mysqld'
     command: ['mysqld', '--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci']
 
   jenkins:
@@ -38,8 +41,9 @@ services:
       - 50000:50000
     container_name: jenkins
     volumes:
-      - /home/${myname}/jenkins_compose/jenkins_configuration:/var/jenkins_home
+      - /home/root/jenkins_compose/jenkins_configuration:/var/jenkins_home
       - /var/run/docker.sock:/var/run/docker.sock
 
 volumes:
   db:
+  dbsocket:

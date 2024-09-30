@@ -29,18 +29,17 @@ class GPTModel(models.Model):
 
     # Model type, e.g. gpt-3.5-turbo
     model = models.CharField(max_length=100, unique=True, choices=[
-                             ("text-davinci-003", "text-davinci-003"),
-                             ("text-davinci-002", "text-davinci-002"),
-                             ("text-curie-001", "text-curie-001"),
-                             ("text-babbage-001", "text-babbage-001"),
-                             ("text-ada-001", "text-ada-001"),
-                             # https://platform.openai.com/docs/models/gpt-4
-                             #  ("gpt-4", "gpt-4"),
-                             #  ("gpt-4-0314", "gpt-4-0314"),
-                             #  ("gpt-4-32k", "gpt-4-32k"),
-                             #  ("gpt-4-32k-0314", "gpt-4-32k-0314"),
-                             ("gpt-3.5-turbo", "gpt-3.5-turbo"),
-                             ("gpt-3.5-turbo-0301", "gpt-3.5-turbo-0301")])
+                            ("text-davinci-003", "text-davinci-003"),
+                            ("text-davinci-002", "text-davinci-002"),
+                            ("text-curie-001", "text-curie-001"),
+                            ("text-babbage-001", "text-babbage-001"),
+                            ("text-ada-001", "text-ada-001"),
+                            ("gpt-4", "gpt-4"),
+                            ("gpt-4-0314", "gpt-4-0314"),
+                            ("gpt-4-32k", "gpt-4-32k"),
+                            ("gpt-4-32k-0314", "gpt-4-32k-0314"),
+                            ("gpt-3.5-turbo", "gpt-3.5-turbo"),
+                            ("gpt-3.5-turbo-0301", "gpt-3.5-turbo-0301")])
     # Only one model should be enabled
     is_enabled = models.BooleanField(default=False)
 

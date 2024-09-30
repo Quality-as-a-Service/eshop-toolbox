@@ -3,4 +3,5 @@ pandas
 openpyxl
 openai
 python-dotenv
+mysqlclient==2.1.0
 mysql-connector-python

@@ -1,4 +1,4 @@
-FROM python:3.8-slim-buster
+FROM python:3.10.8-slim-bullseye
 EXPOSE 80
 
 ENV DockerHOME=/home/app/webapp  
@@ -17,4 +17,4 @@ RUN apt-get install -y default-mysql-client default-libmysqlclient-dev
 
 RUN pip install -r requirements.txt
 
-CMD ["python", "manage.py", "runserver", "0.0.0.0:80", "--insecure"]
+ENTRYPOINT ["sh", "setup.sh"]
