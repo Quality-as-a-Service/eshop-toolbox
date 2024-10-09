@@ -1,7 +1,0 @@
-Django
-pandas
-openpyxl
-openai==0.28
-python-dotenv
-mysqlclient==2.1.0
-mysql-connector-python
