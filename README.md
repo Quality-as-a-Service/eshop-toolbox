@@ -1,10 +1,8 @@
-# Chat GPT for e-shop
-Chat GPT for Dalibor Cmolik e-shop (service).
-
+# E-shop toolbox
+- Provide interface to use chat GPT to process large amount of text
+- Provide crowlers to collect information from public sources
 
 # Setup
-
-
 ## First run
 Manually execute following steps after `docker-compose up -d --build`. Use `docker exec -it  gpt /bin/bash`.
 ```
