@@ -1,0 +1,6 @@
+{
+    "azureFunctions.deploySubpath": "watchdogs",
+    "azureFunctions.scmDoBuildDuringDeployment": true,
+    "azureFunctions.projectLanguage": "Python",
+    "azureFunctions.projectRuntime": "~4"
+}
