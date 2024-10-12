@@ -1,5 +1,4 @@
 import re
-import sys
 import time
 import random
 import logging
@@ -8,17 +7,13 @@ import pandas as pd
 
 from bs4 import BeautifulSoup
 
-if __name__ == '__main__':
-    # Fix import issues
-    import sys
-    sys.path.append('.')
-    from scripts.common import Assembler as BaseAssembler, Product as BaseProduct
-    from scripts.exceptions import NotFound, get_log_wrapper
+from scrappers.common import Assembler as BaseAssembler, Product as BaseProduct
+from scrappers.exceptions import NotFound, get_log_wrapper
 
 ESHOP_NAME = 'schoeffel'
 
 
-logger = logging.getLogger(f"scripts.{ESHOP_NAME}")
+logger = logging.getLogger(ESHOP_NAME)
 logging.basicConfig(level=logging.INFO)
 
 DO_SLEEP = False
