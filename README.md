@@ -1,19 +1,16 @@
-# E-shop toolbox
-- Provide interface to use chat GPT to process large amount of text
-- Provide crowlers to collect information from public sources
+# E-shop Toolbox
+Toolbox is a collection of scripts, that might be useful in e-commerce area.
 
-# Setup
-## First run
-Manually execute following steps after `docker-compose up -d --build`. Use `docker exec -it  gpt /bin/bash`.
-```
-bash setup.sh
-```
+- Provide interface to use chat GPT to process large amount of text. Useful to quickly convert long product description to short, correct description, change style, etc.
+- Provide web scrapers to collect information from public web sites. Author is not responsible for any code and-or information misuse.
+    - antiradary.cz
+    - millers-oils.cz
+    - schoeffel.com
+    - ziener.com
 
-## Stop
-Stop service with `docker-compose down`.
+# Installation
+Install dependencies with `pip install -r requirements.txt`
 
-## Next run
-Start again with `docker-compose up -d --build`. Execute manually following steps if needed.
-```
-python manage.py migrate
-```
+# Usage
+## Scrappers
+Run `python -m scrappers.<scrapper>.main`

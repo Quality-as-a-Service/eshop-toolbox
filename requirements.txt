@@ -1,5 +1,8 @@
+pandas
+openpyxl
+openai==0.28
+python-dotenv
 beautifulsoup4
 requests
-pandas
 requests-cache
 scrapy
