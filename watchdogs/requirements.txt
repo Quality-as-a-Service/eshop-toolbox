@@ -3,3 +3,8 @@
 # Manually managing azure-functions-worker may cause unexpected issues
 
 azure-functions
+azure-eventgrid
+beautifulsoup4
+azure-data-tables
+azure-keyvault-secrets
+azure-identity
