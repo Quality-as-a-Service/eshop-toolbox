@@ -8,9 +8,9 @@ from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 from azure.eventgrid import EventGridPublisherClient, EventGridEvent
 
-from reality_market.parsers.bazos import fetch_single_page as bazos_fetch
-from reality_market.parsers.facebook import fetch_single_page as facebook_fetch
-from reality_market.parsers.sreality import fetch_single_page as sreality_fetch
+from parsers.bazos import fetch_single_page as bazos_fetch
+from parsers.facebook import fetch_single_page as facebook_fetch
+from parsers.sreality import fetch_single_page as sreality_fetch
 
 
 KEY_VALUT_URL = os.environ["KEY_VALUT_URL"]
@@ -73,6 +73,7 @@ class Manager:
 
     def identify_new_offers(self):
         new_offer_detected = False
+        sources = {}
 
         for domain, fetch, filter_query in [
             ["bazos.cz", bazos_fetch, BAZOS_FILTER_QUERY],
@@ -85,15 +86,17 @@ class Manager:
             for item in items:
                 detected = self._check_offer(domain=domain, uid=item)
                 if not len(detected):
+                    logging.info(f'New item {item}')
+                    sources.add(domain)
                     new_offer_detected = True
                     self._insert_offer(domain=domain, uid=item)
 
-        return new_offer_detected
+        return new_offer_detected, sources
 
-    def report_new_offers(self):
+    def report_new_offers(self, sources: set):
         event = EventGridEvent(
             event_type="qaas.reality_market_watchdog.new_offer_detected",
-            data={"verbose": verbose_publish},
+            data={"verbose": verbose_publish, 'sources': sources},
             subject="reality_market",
             data_version="1.0",
         )
@@ -104,4 +107,4 @@ class Manager:
 if __name__ == "__main__":
     manager = Manager()
     # manager.identify_new_offers()
-    manager.report_new_offers()
+    manager.report_new_offers(['2', '1'])
