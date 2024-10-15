@@ -36,7 +36,6 @@ def fetch_single_page(query: str = "/?") -> list[str]:
     data = data["require"][0][3][0]["__bbox"]["require"][0][3][1]["__bbox"]["result"][
         "data"
     ]["viewer"]["marketplace_feed_stories"]["edges"]
-
     return [f'/item/{node["node"]["listing"]["id"]}' for node in data]
 
 

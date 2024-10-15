@@ -73,7 +73,7 @@ class Manager:
 
     def identify_new_offers(self):
         new_offer_detected = False
-        sources = {}
+        sources = set()
 
         for domain, fetch, filter_query in [
             ["bazos.cz", bazos_fetch, BAZOS_FILTER_QUERY],
