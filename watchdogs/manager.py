@@ -105,5 +105,5 @@ class Manager:
 
 if __name__ == "__main__":
     manager = Manager()
-    # manager.identify_new_offers()
-    manager.report_new_offers(["2", "1"])
+    manager.identify_new_offers()
+    # manager.report_new_offers()
