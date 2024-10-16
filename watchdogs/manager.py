@@ -24,11 +24,10 @@ verbose_publish = (
     and os.environ.get("FUNCTIONS_WORKER_RUNTIME") is not None
 )
 
-BAZOS_FILTER_QUERY = "/?hledat=&rubriky=reality&hlokalita=76001&humkreis=10&cenaod=&cenado=&order=&crp=&kitx=ano"
-FACEBOOK_FILTER_QUERY = "/?latitude=49.2239&longitude=17.6688&radius=88"
-SREALITY_FILTER_QUERY = (
-    "?category_main_cb=1&category_type_cb=1&locality_region_id=9&per_page=20"
-)
+# TODO: this should be configured per user
+BAZOS_FILTER_QUERY = "?hledat=&rubriky=reality&hlokalita=76901&humkreis=40&cenaod=&cenado=&Submit=Hledat&order=&crp=&kitx=ano"
+FACEBOOK_FILTER_QUERY = "?sortBy=creation_time_descend&latitude=49.3336&longitude=17.5836&radius=40"
+SREALITY_FILTER_QUERY = "?locality_country_id=112&locality_search_name=Hole%C5%A1ov&locality_entity_type=municipality&locality_entity_id=3125&locality_radius=25&limit=20&sort=-date&include_broker_tip=false&include_region_tip=false&include_project_tip=false"
 
 
 class Manager:
@@ -86,7 +85,7 @@ class Manager:
             for item in items:
                 detected = self._check_offer(domain=domain, uid=item)
                 if not len(detected):
-                    logging.info(f'New item {item}')
+                    logging.info(f"New item {item}")
                     sources.add(domain)
                     new_offer_detected = True
                     self._insert_offer(domain=domain, uid=item)
@@ -96,7 +95,7 @@ class Manager:
     def report_new_offers(self, sources: set):
         event = EventGridEvent(
             event_type="qaas.reality_market_watchdog.new_offer_detected",
-            data={"verbose": verbose_publish, 'sources': sources},
+            data={"verbose": verbose_publish, "sources": sources},
             subject="reality_market",
             data_version="1.0",
         )
@@ -107,4 +106,4 @@ class Manager:
 if __name__ == "__main__":
     manager = Manager()
     # manager.identify_new_offers()
-    manager.report_new_offers(['2', '1'])
+    manager.report_new_offers(["2", "1"])
