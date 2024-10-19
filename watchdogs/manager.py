@@ -96,12 +96,12 @@ class Manager:
                     new_offer_detected = True
                     self._insert_offer(domain=domain, uid=item)
 
-        return new_offer_detected, offers
+        return new_offer_detected, dict(**offers)
 
-    def report_new_offers(self, items: dict[str, list[str]]):
+    def report_new_offers(self, offers: dict[str, list[str]]):
         event = EventGridEvent(
             event_type="qaas.reality_market_watchdog.new_offer_detected",
-            data={"verbose": verbose_publish, "offers": items},
+            data={"verbose": verbose_publish, "offers": offers},
             subject="reality_market",
             data_version="1.0",
         )
