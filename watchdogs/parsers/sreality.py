@@ -1,8 +1,9 @@
 import requests
 from bs4 import BeautifulSoup
 
-SOURCE_WEB_URL = "https://www.sreality.cz/hledani"
-SOURCE_API_URL = "https://www.sreality.cz/api/v1/estates/search"
+DOMAIN = "www.sreality.cz"
+SOURCE_WEB_URL = f"https://{DOMAIN}/hledani"
+SOURCE_API_URL = f"https://{DOMAIN}/api/v1/estates/search"
 
 
 def fetch_single_page_api(query: str = "/?") -> list[str]:
@@ -20,7 +21,7 @@ def fetch_single_page_web(query: str = "/?") -> list[str]:
     )
     soup = BeautifulSoup(response.content, features="html.parser")
     return [
-        el.attrs["href"]
+        f'https://{DOMAIN}{el.attrs["href"]}'
         for el in soup.select(
             'li[id^="estate-list-item"] > a.MuiLink-root:nth-of-type(1)'
         )

@@ -3,7 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 
 SOURCE_URL = "https://www.facebook.com/marketplace/category/propertyforsale"
-# SOURCE_ITEM_URL = "https://www.facebook.com/marketplace"
+SOURCE_ITEM_URL = "https://www.facebook.com/marketplace"
 
 
 def fetch_single_page(query: str = "/?") -> list[str]:
@@ -36,7 +36,7 @@ def fetch_single_page(query: str = "/?") -> list[str]:
     data = data["require"][0][3][0]["__bbox"]["require"][0][3][1]["__bbox"]["result"][
         "data"
     ]["viewer"]["marketplace_feed_stories"]["edges"]
-    return [f'/item/{node["node"]["listing"]["id"]}' for node in data]
+    return [f'{SOURCE_ITEM_URL}/item/{node["node"]["listing"]["id"]}' for node in data]
 
 
 if __name__ == "__main__":

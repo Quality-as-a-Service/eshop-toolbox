@@ -11,6 +11,6 @@ def main(timer: func.TimerRequest) -> None:
     logging.getLogger("azure").setLevel(logging.WARNING)
     logging.basicConfig(level=logging.INFO)
     manager = Manager()
-    new_offers, sources = manager.identify_new_offers()
+    new_offers, offers = manager.identify_new_offers()
     if new_offers:
-        manager.report_new_offers(sources)
+        manager.report_new_offers(offers)

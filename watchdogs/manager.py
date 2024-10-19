@@ -1,6 +1,7 @@
 import os
 import logging
 import hashlib
+from collections import defaultdict
 
 from azure.data.tables import TableServiceClient
 from azure.core.credentials import AzureNamedKeyCredential
@@ -76,7 +77,7 @@ class Manager:
 
     def identify_new_offers(self):
         new_offer_detected = False
-        sources = set()
+        offers = defaultdict(list)
 
         for domain, fetch, filter_query in [
             ["bazos.cz", bazos_fetch, BAZOS_FILTER_QUERY],
@@ -90,16 +91,16 @@ class Manager:
                 detected = self._check_offer(domain=domain, uid=item)
                 if not len(detected):
                     logging.info(f"New item {item}")
-                    sources.add(domain)
+                    offers[domain].append(item)
                     new_offer_detected = True
                     self._insert_offer(domain=domain, uid=item)
 
-        return new_offer_detected, list(sources)
+        return new_offer_detected, offers
 
-    def report_new_offers(self, sources: list):
+    def report_new_offers(self, items: dict[str, list[str]]):
         event = EventGridEvent(
             event_type="qaas.reality_market_watchdog.new_offer_detected",
-            data={"verbose": verbose_publish, "sources": sources},
+            data={"verbose": verbose_publish, "offers": items},
             subject="reality_market",
             data_version="1.0",
         )
