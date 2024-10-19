@@ -10,7 +10,7 @@ from azure.eventgrid import EventGridPublisherClient, EventGridEvent
 
 from parsers.bazos import fetch_single_page as bazos_fetch
 from parsers.facebook import fetch_single_page as facebook_fetch
-from parsers.sreality import fetch_single_page as sreality_fetch
+from parsers.sreality import fetch_single_page_web as sreality_fetch
 
 
 KEY_VALUT_URL = os.environ["KEY_VALUT_URL"]
@@ -26,8 +26,12 @@ verbose_publish = (
 
 # TODO: this should be configured per user
 BAZOS_FILTER_QUERY = "?hledat=&rubriky=reality&hlokalita=76901&humkreis=40&cenaod=&cenado=&Submit=Hledat&order=&crp=&kitx=ano"
-FACEBOOK_FILTER_QUERY = "?sortBy=creation_time_descend&latitude=49.3336&longitude=17.5836&radius=40"
-SREALITY_FILTER_QUERY = "?locality_country_id=112&locality_search_name=Hole%C5%A1ov&locality_entity_type=municipality&locality_entity_id=3125&locality_radius=25&limit=20&sort=-date&include_broker_tip=false&include_region_tip=false&include_project_tip=false"
+FACEBOOK_FILTER_QUERY = (
+    "?sortBy=creation_time_descend&latitude=49.3336&longitude=17.5836&radius=40"
+)
+SREALITY_FILTER_QUERY = (
+    "?region=Hole%C5%A1ov&region-id=3125&region-typ=municipality&vzdalenost=25"
+)
 
 
 class Manager:
@@ -90,9 +94,9 @@ class Manager:
                     new_offer_detected = True
                     self._insert_offer(domain=domain, uid=item)
 
-        return new_offer_detected, sources
+        return new_offer_detected, list(sources)
 
-    def report_new_offers(self, sources: set):
+    def report_new_offers(self, sources: list):
         event = EventGridEvent(
             event_type="qaas.reality_market_watchdog.new_offer_detected",
             data={"verbose": verbose_publish, "sources": sources},
@@ -104,6 +108,8 @@ class Manager:
 
 
 if __name__ == "__main__":
+    logging.getLogger("azure").setLevel(logging.WARNING)
+    logging.basicConfig(level=logging.INFO)
     manager = Manager()
     manager.identify_new_offers()
     # manager.report_new_offers()
