@@ -87,6 +87,7 @@ class Manager:
             logging.info(f"Parsing {domain}")
             items = fetch(filter_query)
             logging.info(f"Collected {len(items)} items")
+            assert len(items) > 5  # Make sure that we still collect  
             for item in items:
                 detected = self._check_offer(domain=domain, uid=item)
                 if not len(detected):
