@@ -31,7 +31,7 @@ FACEBOOK_FILTER_QUERY = (
     "?sortBy=creation_time_descend&latitude=49.3336&longitude=17.5836&radius=40"
 )
 SREALITY_FILTER_QUERY = (
-    "?region=Hole%C5%A1ov&region-id=3125&region-typ=municipality&vzdalenost=25"
+    "?region=Hole%C5%A1ov&region-id=3125&region-typ=municipality&vzdalenost=25&stari=dnes"
 )
 
 
@@ -87,7 +87,6 @@ class Manager:
             logging.info(f"Parsing {domain}")
             items = fetch(filter_query)
             logging.info(f"Collected {len(items)} items")
-            assert len(items) > 5  # Make sure that we still collect  
             for item in items:
                 detected = self._check_offer(domain=domain, uid=item)
                 if not len(detected):
