@@ -30,9 +30,7 @@ BAZOS_FILTER_QUERY = "?hledat=&rubriky=reality&hlokalita=76901&humkreis=40&cenao
 FACEBOOK_FILTER_QUERY = (
     "?sortBy=creation_time_descend&latitude=49.3336&longitude=17.5836&radius=40"
 )
-SREALITY_FILTER_QUERY = (
-    "?region=Hole%C5%A1ov&region-id=3125&region-typ=municipality&vzdalenost=25&stari=dnes"
-)
+SREALITY_FILTER_QUERY = "?region=Hole%C5%A1ov&region-id=3125&region-typ=municipality&vzdalenost=25&stari=dnes"
 
 
 class Manager:
@@ -98,9 +96,13 @@ class Manager:
         return new_offer_detected, dict(**offers)
 
     def report_new_offers(self, offers: dict[str, list[str]]):
+        flat = []
+        for v in offers.values():
+            flat.append(v)
+
         event = EventGridEvent(
             event_type="qaas.reality_market_watchdog.new_offer_detected",
-            data={"verbose": verbose_publish, "offers": offers},
+            data={"verbose": verbose_publish, "offers": offers, "flat": flat},
             subject="reality_market",
             data_version="1.0",
         )
