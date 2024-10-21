@@ -98,11 +98,11 @@ class Manager:
     def report_new_offers(self, offers: dict[str, list[str]]):
         flat = []
         for v in offers.values():
-            flat.append(v)
+            flat.extend(v)
 
         event = EventGridEvent(
             event_type="qaas.reality_market_watchdog.new_offer_detected",
-            data={"verbose": verbose_publish, "offers": offers, "flat": flat},
+            data={"verbose": verbose_publish, "offers": offers, "offers_flat": flat},
             subject="reality_market",
             data_version="1.0",
         )
