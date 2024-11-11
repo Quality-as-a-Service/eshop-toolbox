@@ -60,7 +60,11 @@ def fetch_offer_by_url(url: str):
 
     return {
         "author": None,
-        "title": data["base_marketplace_listing_title"],
+        "title": (
+            data["base_marketplace_listing_title"]
+            if "base_marketplace_listing_title" in data
+            else data["marketplace_listing_title"]
+        ),
         "description": data["redacted_description"]["text"],
     }
 
