@@ -4,13 +4,15 @@ from bs4 import BeautifulSoup
 DOMAIN = "www.sreality.cz"
 SOURCE_WEB_URL = f"https://{DOMAIN}/hledani"
 
+HEADERS = {  # Bypass ad agreement
+    "Cookie": "last-redirect=1; __cw_snc=1; szncmpone=1; cw_referrer=; euconsent-v2=CQGvaEAQGvaEAD3ACQCSBMFsAP_gAEPgAATIJNQIwAFAAQAAqABkAEAAKAAZAA0ACSAEwAJwAWwAvwBhAGIAQEAggCEAEUAI4ATgAoQBxADuAIQAUgA04COgE2gKkAW4AvMBjID_AIDgRmAk0BecBIACoAIAAZAA0ACYAGIAPwAhABHACcAGaAO4AhABFgE2gKkAW4AvMAAA.YAAAAAAAAWAA"
+}
+
 
 def list_offers(query: str = "/?") -> list[str]:
     response = requests.get(
         f"{SOURCE_WEB_URL}{query}",
-        headers={  # Bypass ad agreement
-            "Cookie": "last-redirect=1; __cw_snc=1; szncmpone=1; cw_referrer=; euconsent-v2=CQGvaEAQGvaEAD3ACQCSBMFsAP_gAEPgAATIJNQIwAFAAQAAqABkAEAAKAAZAA0ACSAEwAJwAWwAvwBhAGIAQEAggCEAEUAI4ATgAoQBxADuAIQAUgA04COgE2gKkAW4AvMBjID_AIDgRmAk0BecBIACoAIAAZAA0ACYAGIAPwAhABHACcAGaAO4AhABFgE2gKkAW4AvMAAA.YAAAAAAAAWAA"
-        },
+        headers=HEADERS,
     )
     soup = BeautifulSoup(response.content, features="html.parser")
     return [
@@ -21,5 +23,31 @@ def list_offers(query: str = "/?") -> list[str]:
     ]
 
 
+def fetch_offer_by_url(url: str):
+    response = requests.get(url, headers=HEADERS)
+    soup = BeautifulSoup(response.content, features="html.parser")
+
+    author = soup.select(
+        "#__next > div.MuiBox-root.css-17gcfrm > div.MuiBox-root.css-14kccxu > div.MuiBox-root.css-vq9zkb > div > div.MuiBox-root.css-0 > div > div > section > div:nth-child(3) > div > div > p"
+    )
+    description = soup.select(
+        "#__next > div.MuiBox-root.css-17gcfrm > div.MuiBox-root.css-14kccxu > div.MuiBox-root.css-1ivt71a > div > div > section.MuiBox-root.css-i3pbo > div.MuiBox-root.css-zbebq3 > div:nth-child(1) > pre"
+    )
+    title = soup.select(
+        "#__next > div.MuiBox-root.css-17gcfrm > div.MuiBox-root.css-14kccxu > div.MuiBox-root.css-1uikywc > h1"
+    )
+    return {
+        "title": title[0].text if len(title) else None,
+        "description": description[0].text if len(description) else None,
+        "author": author[0].text if len(author) else None,
+    }
+
+
 if __name__ == "__main__":
-    print(list_offers())
+    # print(list_offers())
+    # print(
+    #     fetch_offer_by_url(
+    #         "https://www.sreality.cz/detail/prodej/dum/rodinny/jimramov-jimramov-padelek/2012865100"
+    #     )
+    # )
+    pass
