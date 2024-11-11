@@ -22,13 +22,4 @@ def list_offers(query: str = "/?") -> list[str]:
 
 
 if __name__ == "__main__":
-    # print(
-    #     fetch_single_page_api(
-    #         "?locality_country_id=112&locality_search_name=Hole%C5%A1ov&locality_entity_type=municipality&locality_entity_id=3125&locality_radius=25&limit=20&sort=-date&include_broker_tip=false&include_region_tip=false&include_project_tip=false"
-    #     )
-    # )
-    print(
-        list_offers(
-            "?region=Hole%C5%A1ov&region-id=3125&region-typ=municipality&vzdalenost=25"
-        )
-    )
+    print(list_offers())

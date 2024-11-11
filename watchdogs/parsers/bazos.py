@@ -15,4 +15,4 @@ def list_offers(query: str = "/?") -> list[str]:
 
 
 if __name__ == "__main__":
-    print("\n".join(list_offers()))
+    print(list_offers())
