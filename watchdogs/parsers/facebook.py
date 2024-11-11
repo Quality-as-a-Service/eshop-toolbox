@@ -6,7 +6,7 @@ SOURCE_URL = "https://www.facebook.com/marketplace/category/propertyforsale"
 SOURCE_ITEM_URL = "https://www.facebook.com/marketplace"
 
 
-def fetch_single_page(query: str = "/?") -> list[str]:
+def list_offers(query: str = "/?") -> list[str]:
     response = requests.get(
         f"{SOURCE_URL}{query}",
         headers={
@@ -40,4 +40,4 @@ def fetch_single_page(query: str = "/?") -> list[str]:
 
 
 if __name__ == "__main__":
-    print(fetch_single_page())
+    print(list_offers())

@@ -3,16 +3,9 @@ from bs4 import BeautifulSoup
 
 DOMAIN = "www.sreality.cz"
 SOURCE_WEB_URL = f"https://{DOMAIN}/hledani"
-SOURCE_API_URL = f"https://{DOMAIN}/api/v1/estates/search"
 
 
-def fetch_single_page_api(query: str = "/?") -> list[str]:
-    # Not stable
-    response = requests.get(f"{SOURCE_API_URL}{query}")
-    return [str(item["hash_id"]) for item in response.json()["results"]]
-
-
-def fetch_single_page_web(query: str = "/?") -> list[str]:
+def list_offers(query: str = "/?") -> list[str]:
     response = requests.get(
         f"{SOURCE_WEB_URL}{query}",
         headers={  # Bypass ad agreement
@@ -35,7 +28,7 @@ if __name__ == "__main__":
     #     )
     # )
     print(
-        fetch_single_page_web(
+        list_offers(
             "?region=Hole%C5%A1ov&region-id=3125&region-typ=municipality&vzdalenost=25"
         )
     )

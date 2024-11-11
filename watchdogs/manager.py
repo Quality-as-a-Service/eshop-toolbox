@@ -9,9 +9,9 @@ from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 from azure.eventgrid import EventGridPublisherClient, EventGridEvent
 
-from parsers.bazos import fetch_single_page as bazos_fetch
-from parsers.facebook import fetch_single_page as facebook_fetch
-from parsers.sreality import fetch_single_page_web as sreality_fetch
+from parsers.bazos import list_offers as bazos_list_offers
+from parsers.facebook import list_offers as facebook_list_offers
+from parsers.sreality import list_offers as sreality_list_offers
 
 
 KEY_VALUT_URL = os.environ["KEY_VALUT_URL"]
@@ -78,9 +78,9 @@ class Manager:
         offers = defaultdict(list)
 
         for domain, fetch, filter_query in [
-            ["bazos.cz", bazos_fetch, BAZOS_FILTER_QUERY],
-            ["facebook.com", facebook_fetch, FACEBOOK_FILTER_QUERY],
-            ["sreality.cz", sreality_fetch, SREALITY_FILTER_QUERY],
+            ["bazos.cz", bazos_list_offers, BAZOS_FILTER_QUERY],
+            ["facebook.com", facebook_list_offers, FACEBOOK_FILTER_QUERY],
+            ["sreality.cz", sreality_list_offers, SREALITY_FILTER_QUERY],
         ]:
             logging.info(f"Parsing {domain}")
             items = fetch(filter_query)
