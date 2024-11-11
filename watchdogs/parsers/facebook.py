@@ -1,5 +1,6 @@
 import json
 import requests
+import logging
 from bs4 import BeautifulSoup
 
 SOURCE_URL = "https://www.facebook.com/marketplace/category/propertyforsale"
@@ -19,7 +20,7 @@ HEADERS = {
 }
 
 
-def list_offers(query: str = "/?") -> list[str]:
+def list_offers(query: str = "/?") -> list[dict]:
     response = requests.get(
         f"{SOURCE_URL}{query}",
         headers=HEADERS,
@@ -35,14 +36,23 @@ def list_offers(query: str = "/?") -> list[str]:
         .pop()
         .text
     )
+
     data = data["require"][0][3][0]["__bbox"]["require"][0][3][1]["__bbox"]["result"][
         "data"
     ]["viewer"]["marketplace_feed_stories"]["edges"]
-    return [f'{SOURCE_ITEM_URL}/item/{node["node"]["listing"]["id"]}' for node in data]
+
+    return [
+        {
+            "url": f'{SOURCE_ITEM_URL}/item/{node["node"]["listing"]["id"]}',
+            "title": node["node"]["listing"]["marketplace_listing_title"],
+        }
+        for node in data
+    ]
 
 
 def fetch_offer_by_url(url: str):
     response = requests.get(url, headers=HEADERS)
+
     soup = BeautifulSoup(response.content, features="html.parser")
     data = json.loads(
         [
@@ -69,8 +79,7 @@ def fetch_offer_by_url(url: str):
 
 
 if __name__ == "__main__":
-    # print(list_offers())
-    print(
-        fetch_offer_by_url("https://www.facebook.com/marketplace/item/1139894651084886")
-    )
-    pass
+    print(list_offers())
+    # print(
+    #     fetch_offer_by_url("https://www.facebook.com/marketplace/item/3004680319687306")
+    # )

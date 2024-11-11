@@ -83,14 +83,14 @@ class Manager:
         new_offer_detected = False
         collection_failed = False
 
-        offers = defaultdict(list)
+        rich_offers = defaultdict(list)
 
         for domain, domain_list, domain_fetch_by_url, filter_query in [
             ["bazos.cz", bazos_list_offers, bazos_offer_by_url, BAZOS_FILTER_QUERY],
             [
                 "facebook.com",
                 facebook_list_offers,
-                facebook_offer_by_url,
+                None,
                 FACEBOOK_FILTER_QUERY,
             ],
             [
@@ -102,28 +102,36 @@ class Manager:
         ]:
             logging.info(f"Parsing {domain}")
 
-            urls = domain_list(filter_query)
-            logging.info(f"Collected {len(urls)} offers")
+            offers = domain_list(filter_query)
+            logging.info(f"Collected {len(offers)} offers")
 
-            for url in urls:
-                detected = self._check_offer(domain=domain, uid=url)
+            for offer in offers:
+                detected = self._check_offer(domain=domain, uid=offer["url"])
                 if not len(detected):
-                    logging.info(f"New offer {url}")
+                    logging.info(f"New offer {offer['url']}")
 
                     try:
-                        offer = domain_fetch_by_url(url)
+                        offer_meta = {
+                            "author": None,
+                            "title": None,
+                            "description": None,
+                        }
+                        if domain_fetch_by_url is not None:
+                            offer_meta = domain_fetch_by_url(offer["url"])
                     except Exception as e:
-                        logging.info(f"Failed to collect offer {url}")
+                        logging.info(f"Failed to collect offer {offer['url']}")
                         logging.exception(e)
                         collection_failed = True
                         continue
-                    offer["url"] = url
-                    offers[domain].append(offer)
+
+                    offer_meta.update(offer)
+                    offer = offer_meta
+                    rich_offers[domain].append(offer)
 
                     new_offer_detected = True
-                    self._insert_offer(domain=domain, uid=url)
+                    self._insert_offer(domain=domain, uid=offer["url"])
 
-        return new_offer_detected, collection_failed, dict(**offers)
+        return new_offer_detected, collection_failed, dict(**rich_offers)
 
     def report_new_offers(self, offers: dict[str, list[dict]]):
         offers_flat = []
@@ -149,5 +157,6 @@ if __name__ == "__main__":
     logging.getLogger("azure").setLevel(logging.WARNING)
     logging.basicConfig(level=logging.INFO)
     manager = Manager()
-    _, offers = manager.identify_new_offers()
+    _, _, offers = manager.identify_new_offers()
+    print(offers)
     # manager.report_new_offers(offers)  # Careful!

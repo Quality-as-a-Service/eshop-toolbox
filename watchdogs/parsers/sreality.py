@@ -9,14 +9,14 @@ HEADERS = {  # Bypass ad agreement
 }
 
 
-def list_offers(query: str = "/?") -> list[str]:
+def list_offers(query: str = "/?") -> list[dict]:
     response = requests.get(
         f"{SOURCE_WEB_URL}{query}",
         headers=HEADERS,
     )
     soup = BeautifulSoup(response.content, features="html.parser")
     return [
-        f'https://{DOMAIN}{el.attrs["href"]}'
+        {"url": f'https://{DOMAIN}{el.attrs["href"]}'}
         for el in soup.select(
             'li[id^="estate-list-item"] > a.MuiLink-root:nth-of-type(1)'
         )
