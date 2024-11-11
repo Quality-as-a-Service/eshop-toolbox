@@ -20,10 +20,7 @@ TABLE_STORAGE_NAME = os.environ["TABLE_STORAGE_NAME"]
 TABLE_STORAGE_OFFERS_TABLE_NAME = os.environ["TABLE_STORAGE_OFFERS_TABLE_NAME"]
 EVENTGRID_TOPIC_ENDPOINT = os.environ["EVENTGRID_TOPIC_ENDPOINT"]
 
-verbose_publish = (
-    os.environ.get("FUNCTIONS_EXTENSION_VERSION") is not None
-    and os.environ.get("FUNCTIONS_WORKER_RUNTIME") is not None
-)
+verbose_publish = os.environ.get("VERBOSE_PUBLISH") == "1"
 
 # TODO: this should be configured per user
 BAZOS_FILTER_QUERY = "?hledat=&rubriky=reality&hlokalita=76901&humkreis=40&cenaod=&cenado=&Submit=Hledat&order=&crp=&kitx=ano"
