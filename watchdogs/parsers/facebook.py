@@ -48,8 +48,7 @@ def fetch_offer_by_url(url: str):
         [
             el
             for el in soup.select('script[type="application/json"]')
-            if "GroupCommerceProductItem" in str(el)
-            and "marketplace_product_details_page" in str(el)
+            if "marketplace_product_details_page" in str(el)
         ]
         .pop()
         .text
@@ -71,7 +70,7 @@ def fetch_offer_by_url(url: str):
 
 if __name__ == "__main__":
     # print(list_offers())
-    # print(
-    #     fetch_offer_by_url("https://www.facebook.com/marketplace/item/1023704802823782")
-    # )
+    print(
+        fetch_offer_by_url("https://www.facebook.com/marketplace/item/1139894651084886")
+    )
     pass

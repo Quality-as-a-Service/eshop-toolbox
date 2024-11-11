@@ -81,6 +81,8 @@ class Manager:
 
     def identify_new_offers(self):
         new_offer_detected = False
+        collection_failed = False
+
         offers = defaultdict(list)
 
         for domain, domain_list, domain_fetch_by_url, filter_query in [
@@ -108,14 +110,20 @@ class Manager:
                 if not len(detected):
                     logging.info(f"New offer {url}")
 
-                    offer = domain_fetch_by_url(url)
+                    try:
+                        offer = domain_fetch_by_url(url)
+                    except Exception as e:
+                        logging.info(f"Failed to collect offer {url}")
+                        logging.exception(e)
+                        collection_failed = True
+                        continue
                     offer["url"] = url
                     offers[domain].append(offer)
 
                     new_offer_detected = True
                     self._insert_offer(domain=domain, uid=url)
 
-        return new_offer_detected, dict(**offers)
+        return new_offer_detected, collection_failed, dict(**offers)
 
     def report_new_offers(self, offers: dict[str, list[dict]]):
         offers_flat = []
