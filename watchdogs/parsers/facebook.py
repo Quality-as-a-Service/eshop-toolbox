@@ -51,6 +51,8 @@ def list_offers(query: str = "/?") -> list[dict]:
 
 
 def fetch_offer_by_url(url: str):
+    # It is not possible to scrap facebook details from server and this only works from
+    # sort of personal ips (have no idea how...)
     response = requests.get(url, headers=HEADERS)
 
     soup = BeautifulSoup(response.content, features="html.parser")
