@@ -9,9 +9,18 @@ from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 from azure.eventgrid import EventGridPublisherClient, EventGridEvent
 
-from parsers.bazos import fetch_single_page as bazos_fetch
-from parsers.facebook import fetch_single_page as facebook_fetch
-from parsers.sreality import fetch_single_page_web as sreality_fetch
+from parsers.bazos import (
+    list_offers as bazos_list_offers,
+    fetch_offer_by_url as bazos_offer_by_url,
+)
+from parsers.facebook import (
+    list_offers as facebook_list_offers,
+    fetch_offer_by_url as facebook_offer_by_url,
+)
+from parsers.sreality import (
+    list_offers as sreality_list_offers,
+    fetch_offer_by_url as sreality_offer_by_url,
+)
 
 
 KEY_VALUT_URL = os.environ["KEY_VALUT_URL"]
@@ -72,34 +81,71 @@ class Manager:
 
     def identify_new_offers(self):
         new_offer_detected = False
-        offers = defaultdict(list)
+        collection_failed = False
 
-        for domain, fetch, filter_query in [
-            ["bazos.cz", bazos_fetch, BAZOS_FILTER_QUERY],
-            ["facebook.com", facebook_fetch, FACEBOOK_FILTER_QUERY],
-            ["sreality.cz", sreality_fetch, SREALITY_FILTER_QUERY],
+        rich_offers = defaultdict(list)
+
+        for domain, domain_list, domain_fetch_by_url, filter_query in [
+            ["bazos.cz", bazos_list_offers, bazos_offer_by_url, BAZOS_FILTER_QUERY],
+            [
+                "facebook.com",
+                facebook_list_offers,
+                None,
+                FACEBOOK_FILTER_QUERY,
+            ],
+            [
+                "sreality.cz",
+                sreality_list_offers,
+                sreality_offer_by_url,
+                SREALITY_FILTER_QUERY,
+            ],
         ]:
             logging.info(f"Parsing {domain}")
-            items = fetch(filter_query)
-            logging.info(f"Collected {len(items)} items")
-            for item in items:
-                detected = self._check_offer(domain=domain, uid=item)
+
+            offers = domain_list(filter_query)
+            logging.info(f"Collected {len(offers)} offers")
+
+            for offer in offers:
+                detected = self._check_offer(domain=domain, uid=offer["url"])
                 if not len(detected):
-                    logging.info(f"New item {item}")
-                    offers[domain].append(item)
+                    logging.info(f"New offer {offer['url']}")
+
+                    try:
+                        offer_meta = {
+                            "author": None,
+                            "title": None,
+                            "description": None,
+                        }
+                        if domain_fetch_by_url is not None:
+                            offer_meta = domain_fetch_by_url(offer["url"])
+                    except Exception as e:
+                        logging.info(f"Failed to collect offer {offer['url']}")
+                        logging.exception(e)
+                        collection_failed = True
+                        continue
+
+                    offer_meta.update(offer)
+                    offer = offer_meta
+                    rich_offers[domain].append(offer)
+
                     new_offer_detected = True
-                    self._insert_offer(domain=domain, uid=item)
+                    self._insert_offer(domain=domain, uid=offer["url"])
 
-        return new_offer_detected, dict(**offers)
+        return new_offer_detected, collection_failed, dict(**rich_offers)
 
-    def report_new_offers(self, offers: dict[str, list[str]]):
-        flat = []
-        for v in offers.values():
-            flat.extend(v)
+    def report_new_offers(self, offers: dict[str, list[dict]]):
+        offers_flat = []
+        for collection in offers.values():
+            offers_flat.extend(collection)
+        offers_flat = [o["url"] for o in offers_flat]
 
         event = EventGridEvent(
             event_type="qaas.reality_market_watchdog.new_offer_detected",
-            data={"verbose": verbose_publish, "offers": offers, "offers_flat": flat},
+            data={
+                "verbose": verbose_publish,
+                "offers_rich": offers,
+                "offers_flat": offers_flat,
+            },
             subject="reality_market",
             data_version="1.0",
         )
@@ -111,5 +157,6 @@ if __name__ == "__main__":
     logging.getLogger("azure").setLevel(logging.WARNING)
     logging.basicConfig(level=logging.INFO)
     manager = Manager()
-    manager.identify_new_offers()
-    # manager.report_new_offers()
+    _, _, offers = manager.identify_new_offers()
+    print(offers)
+    # manager.report_new_offers(offers)  # Careful!
