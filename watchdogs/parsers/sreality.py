@@ -27,9 +27,8 @@ def fetch_offer_by_url(url: str):
     response = requests.get(url, headers=HEADERS)
     soup = BeautifulSoup(response.content, features="html.parser")
 
-    _author_base = "#__next > div.MuiBox-root.css-17gcfrm > div.MuiBox-root.css-14kccxu > div.MuiBox-root.css-vq9zkb > div > div.MuiBox-root.css-0 > div > div > section > div > div > div"
-    author = soup.select(f"{_author_base}> a,p:nth-child(0)") or soup.select(
-        f"{_author_base}> p"
+    author = soup.select(
+        "#__next > div.MuiBox-root.css-17gcfrm > div.MuiBox-root.css-14kccxu > div.MuiBox-root.css-vq9zkb > div > div.MuiBox-root.css-0 > div > div > section"
     )
     description = soup.select(
         "#__next > div.MuiBox-root.css-17gcfrm > div.MuiBox-root.css-14kccxu > div.MuiBox-root.css-1ivt71a > div > div > section.MuiBox-root.css-i3pbo > div.MuiBox-root.css-zbebq3 > div:nth-child(1) > pre"
@@ -37,19 +36,31 @@ def fetch_offer_by_url(url: str):
     title = soup.select(
         "#__next > div.MuiBox-root.css-17gcfrm > div.MuiBox-root.css-14kccxu > div.MuiBox-root.css-1uikywc > h1"
     )
+
+    def clean_author(author: str) -> str:
+        author = author.lower()
+        author = (
+            author.replace("prodejce", "")
+            .replace("přejít na web", " ")
+            .replace("zobrazit telefon", " ")
+            .replace("zobrazit e-mail", " ")
+            .replace("★", "")
+        )
+        return author
+
     return {
         "title": title[0].text if len(title) else None,
         "description": description[0].text if len(description) else None,
-        "author": author[0].text if len(author) else None,
+        "author": clean_author(author[0].text) if len(author) else None,
     }
 
 
 if __name__ == "__main__":
     # print(list_offers())
-    # print(
-    #     fetch_offer_by_url(
-    #         # "https://www.sreality.cz/detail/prodej/dum/rodinny/jimramov-jimramov-padelek/2012865100"
-    #         # 'https://www.sreality.cz/detail/prodej/byt/2+kk/kolin-kolin-ii-fugnerova/22925900'
-    #     )
-    # )
+    print(
+        fetch_offer_by_url(
+            "https://www.sreality.cz/detail/prodej/dum/rodinny/jimramov-jimramov-padelek/2012865100"
+            # "https://www.sreality.cz/detail/prodej/byt/2+kk/kolin-kolin-ii-fugnerova/22925900"
+        )
+    )
     pass

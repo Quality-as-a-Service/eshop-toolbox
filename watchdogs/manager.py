@@ -83,7 +83,7 @@ class Manager:
         new_offer_detected = False
         collection_failed = False
 
-        rich_offers = defaultdict(list)
+        rich_offers = []
 
         for domain, domain_list, domain_fetch_by_url, filter_query in [
             ["bazos.cz", bazos_list_offers, bazos_offer_by_url, BAZOS_FILTER_QUERY],
@@ -126,25 +126,20 @@ class Manager:
 
                     offer_meta.update(offer)
                     offer = offer_meta
-                    rich_offers[domain].append(offer)
+                    rich_offers.append(offer)
 
                     new_offer_detected = True
                     self._insert_offer(domain=domain, uid=offer["url"])
 
-        return new_offer_detected, collection_failed, dict(**rich_offers)
+        return new_offer_detected, collection_failed, rich_offers
 
-    def report_new_offers(self, offers: dict[str, list[dict]]):
-        offers_flat = []
-        for collection in offers.values():
-            offers_flat.extend(collection)
-        offers_flat = [o["url"] for o in offers_flat]
-
+    def report_new_offers(self, offers_rich: list[dict]):
         event = EventGridEvent(
             event_type="qaas.reality_market_watchdog.new_offer_detected",
             data={
                 "verbose": verbose_publish,
-                "offers_rich": offers,
-                "offers_flat": offers_flat,
+                "offers_rich": offers_rich,
+                "offers_flat": [o["url"] for o in offers_rich],
             },
             subject="reality_market",
             data_version="1.0",
