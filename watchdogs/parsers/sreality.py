@@ -28,13 +28,13 @@ def fetch_offer_by_url(url: str):
     soup = BeautifulSoup(response.content, features="html.parser")
 
     author = soup.select(
-        "#__next > div.MuiBox-root.css-17gcfrm > div.MuiBox-root.css-14kccxu > div.MuiBox-root.css-vq9zkb > div > div.MuiBox-root.css-0 > div > div > section"
+        "div.MuiBox-root.css-17gcfrm > div.MuiBox-root.css-14kccxu > div.MuiBox-root.css-vq9zkb > div > div.MuiBox-root.css-0 > div > div > section"
     )
     description = soup.select(
-        "#__next > div.MuiBox-root.css-17gcfrm > div.MuiBox-root.css-14kccxu > div.MuiBox-root.css-1ivt71a > div > div > section.MuiBox-root.css-i3pbo > div.MuiBox-root.css-zbebq3 > div:nth-child(1) > pre"
+        "div.MuiBox-root.css-17gcfrm > div.MuiBox-root.css-14kccxu > div.MuiBox-root.css-1ivt71a > div > div > section.MuiBox-root.css-i3pbo > div.MuiBox-root.css-zbebq3 > div:nth-child(1) > pre"
     )
     title = soup.select(
-        "#__next > div.MuiBox-root.css-17gcfrm > div.MuiBox-root.css-14kccxu > div.MuiBox-root.css-1uikywc > h1"
+        "div.MuiBox-root.css-17gcfrm > div.MuiBox-root.css-14kccxu > div.MuiBox-root.css-1uikywc > h1"
     )
 
     def clean_author(author: str) -> str:
@@ -59,7 +59,7 @@ if __name__ == "__main__":
     # print(list_offers())
     print(
         fetch_offer_by_url(
-            "https://www.sreality.cz/detail/prodej/dum/rodinny/jimramov-jimramov-padelek/2012865100"
+            "https://www.sreality.cz/detail/pronajem/byt/2+1/prerov-prerov-i-mesto-jilemnickeho/3034628684"
             # "https://www.sreality.cz/detail/prodej/byt/2+kk/kolin-kolin-ii-fugnerova/22925900"
         )
     )
