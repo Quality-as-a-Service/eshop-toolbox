@@ -11,9 +11,18 @@ app = func.FunctionApp()
 def main(timer: func.TimerRequest) -> None:
     logging.getLogger("azure").setLevel(logging.WARNING)
     logging.basicConfig(level=logging.INFO)
+
     manager = Manager()
-    new_offer_detected, collection_failed, offers = manager.identify_new_offers()
-    if new_offer_detected:
-        manager.report_new_offers(offers)
+    e = "Failed to collect market changes"
+
+    try:
+        new_offer_detected, collection_failed, offers = manager.identify_new_offers()
+        if new_offer_detected:
+            manager.report_new_offers(offers)
+    except Exception as e:
+        manager.report_failure(str(e))
+        raise
+
     if collection_failed:
-        raise RuntimeError("Collection failed")
+        manager.report_failure(e)
+        raise RuntimeError(e)

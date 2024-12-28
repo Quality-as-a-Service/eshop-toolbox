@@ -1,7 +1,6 @@
 import os
 import logging
 import hashlib
-from collections import defaultdict
 
 from azure.data.tables import TableServiceClient
 from azure.core.credentials import AzureNamedKeyCredential
@@ -135,11 +134,23 @@ class Manager:
 
     def report_new_offers(self, offers_rich: list[dict]):
         event = EventGridEvent(
-            event_type="qaas.reality_market_watchdog.new_offer_detected",
+            event_type="qaas.reality_market.new_offer_detected",
             data={
                 "verbose": verbose_publish,
                 "offers_rich": offers_rich,
                 "offers_flat": [o["url"] for o in offers_rich],
+            },
+            subject="reality_market",
+            data_version="1.0",
+        )
+
+        self.eventgrid_client.send(event)
+
+    def report_failure(self, message: str):
+        event = EventGridEvent(
+            event_type="qaas.reality_market.failure",
+            data={
+                "message": str(message)[:1000],
             },
             subject="reality_market",
             data_version="1.0",
