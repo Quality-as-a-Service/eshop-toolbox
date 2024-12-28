@@ -163,6 +163,7 @@ if __name__ == "__main__":
     logging.getLogger("azure").setLevel(logging.WARNING)
     logging.basicConfig(level=logging.INFO)
     manager = Manager()
-    _, _, offers = manager.identify_new_offers()
-    print(offers)
+    # _, _, offers = manager.identify_new_offers()
+    # print(offers)
     # manager.report_new_offers(offers)  # Careful!
+    manager.report_failure('Test')
